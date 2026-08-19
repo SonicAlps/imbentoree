@@ -21,6 +21,13 @@ type Order = {
 
 const STATUS_OPTIONS = ["pending", "confirmed", "in_production", "completed", "cancelled"];
 
+const STATUS_FLOW: Record<string, string[]> = {
+  pending: ["pending", "confirmed", "cancelled"],
+  confirmed: ["confirmed", "in_production", "cancelled"],
+  in_production: ["in_production", "completed"],
+  completed: ["completed"],
+  cancelled: ["cancelled"],
+};
 
 
 const STATUS_STYLES: Record<string, string> = {
@@ -244,11 +251,59 @@ const completedCount = orders.filter(
 
 </div>
 
+<div className="mb-3 flex items-center justify-between">
+  <p className="text-sm text-zinc-500">
+    {filteredOrders.length}{" "}
+    {filteredOrders.length === 1 ? "order" : "orders"}
+    {searchQuery.trim() && " found"}
+  </p>
+
+  {(searchQuery || statusFilter !== "all") && (
+    <button
+      type="button"
+      onClick={() => {
+        setSearchQuery("");
+        setStatusFilter("all");
+      }}
+      className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+    >
+      Clear filters
+    </button>
+  )}
+</div>
+
+
+
       {isLoading ? (
         <p className="text-sm text-zinc-500">Loading orders...</p>
       ) : filteredOrders.length === 0 ? (
-        <p className="text-sm text-zinc-500">No orders found.</p>
-      ) : (
+  <div className="rounded-xl border bg-white px-6 py-12 text-center">
+    <p className="font-medium text-zinc-900">
+      {orders.length === 0
+        ? "No orders yet."
+        : "No matching orders."}
+    </p>
+
+    <p className="mt-1 text-sm text-zinc-500">
+      {orders.length === 0
+        ? "Create your first Imbento order to get started."
+        : "Try a different search or clear your filters."}
+    </p>
+
+    {orders.length > 0 && (
+      <button
+        type="button"
+        onClick={() => {
+          setSearchQuery("");
+          setStatusFilter("all");
+        }}
+        className="mt-4 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+      >
+        Clear filters
+      </button>
+    )}
+  </div>
+) : (
         <div className="overflow-x-auto rounded-xl border bg-white">
           <table className="w-full text-sm">
             <thead className="border-b bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
