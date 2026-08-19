@@ -21,6 +21,14 @@ type Order = {
 };
 
 
+type StatusHistory = {
+  id: string;
+  order_id: string;
+  status: string;
+  created_at: string;
+};
+
+
 const STATUS_OPTIONS = [
   "pending",
   "confirmed",
@@ -47,6 +55,7 @@ export default function OrderDetailPage() {
   const orderNumber = params.orderNumber as string;
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [statusHistory, setStatusHistory] = useState<StatusHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -64,11 +73,33 @@ export default function OrderDetailPage() {
       }
 
       setOrder(data as Order);
+
+      // History Data
+
+      const { data: historyData, error: historyError } = await supabase
+      .from("order_status_history")
+      .select("*")
+      .eq("order_id", data.id)
+      .order("created_at", { ascending: false });
+      
+      if (historyError) {
+        console.error("Failed to fetch order history:",
+          historyError.message);
+        } else {
+          console.log("ORDER HISTORY:", historyData);
+          setStatusHistory(historyData as StatusHistory[]);
+
+        }
       setIsLoading(false);
     }
 
     fetchOrder();
+    
+
+  
   }, [orderNumber]);
+
+  
 
 
   async function updateStatus(newStatus: string) {
@@ -210,6 +241,55 @@ export default function OrderDetailPage() {
 
     </div>
 
+  </div>
+
+</section>
+
+{/* STATUS TIMELINE */}
+<section className="rounded-xl border bg-white p-6 md:col-span-2">
+
+  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+    Order Timeline
+  </h2>
+
+  <div className="mt-6 space-y-6">
+    {statusHistory.map((history, index) => (
+      <div key={history.id} className="flex gap-4">
+
+        {/* TIMELINE DOT */}
+        <div className="flex flex-col items-center">
+
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-full ${
+              index === 0
+                ? "bg-zinc-900 text-white"
+                : "bg-zinc-100 text-zinc-500"
+            }`}
+          >
+            {index === 0 ? "✓" : "•"}
+          </div>
+
+          {index !== statusHistory.length - 1 && (
+            <div className="mt-2 h-full w-px bg-zinc-200" />
+          )}
+
+        </div>
+
+        {/* EVENT */}
+        <div className="pb-2">
+
+          <p className="font-medium capitalize">
+            {history.status.replace("_", " ")}
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-400">
+            {new Date(history.created_at).toLocaleString()}
+          </p>
+
+        </div>
+
+      </div>
+    ))}
   </div>
 
 </section>
