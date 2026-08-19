@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import OrderPreview from "./order-preview";
 import { supabase } from "@/src/lib/supabase";
 import { toCamelCaseName } from "@/src/lib/format";
+import { products, type ProductName } from "@/src/lib/products";
 
 async function generateOrderNumber(): Promise<string> {
   const { data, error } = await supabase.rpc("generate_order_number");
@@ -17,54 +18,75 @@ async function generateOrderNumber(): Promise<string> {
   return data as string;
 }
 
-const products = {
 
-  "Pouch": {
-    outerFabric: ["Black", "Army Green", "Red", "Dark Pink"],
-    innerFabric: ["Orange", "Black", "Red", "Dark Pink", "Neon Green"],
-    strapSize: ["1 inch", "1.5 inch", "Paracord"],
-    strapColor: ["Army Green", "Black",],
-    mountingType: ["Sling Hook", "Buckle"],
-    basePrice: 750,
-  },
-
-  "Small Sling": {
-    outerFabric: ["Black", "Army Green", "Red", "Dark Pink", "Neon Green"],
-    innerFabric: ["Orange", "Black", "Red", "Dark Pink", "Neon Green"],
-    strapSize: ["1 inch", "1.5 inch", "Paracord"],
-    strapColor: ["Army Green", "Black",],
-    mountingType: ["Sling Hook", "Buckle"],
-    basePrice: 1500,
-  },
-
-  
-  "Big Sling": {
-    outerFabric: ["Black", "Army Green", "Red", "Dark Pink"],
-    innerFabric: ["Orange", "Black", "Red", "Dark Pink", "Neon Green"],
-    strapSize: ["1 inch", "1.5 inch", "Paracord"],
-    strapColor: ["Army Green", "Black", ],
-    mountingType: ["Sling Hook", "Buckle"],
-    basePrice: 2000,
-  },
+type ExistingOrder = {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  email: string;
+  product: ProductName;
+  outer_fabric: string;
+  inner_fabric: string;
+  strap_size: string | null;
+  strap_color: string | null;
+  mounting_type: string | null;
+  status: string;
+  price: number;
+  created_at: string;
 };
 
-type ProductName = keyof typeof products;
+type OrderFormProps = {
+  mode?: "create" | "edit";
+  initialOrder?: ExistingOrder;
+};
 
-export default function OrderForm() {
+export default function OrderForm({
+  mode = "create",
+  initialOrder,
+}: OrderFormProps) {
   // ---- ALL STATE + FUNCTIONS LIVE HERE, INSIDE THE COMPONENT ----
 
-  const [orderNumber, setOrderNumber] = useState<string>("");
-  const [customerName, setCustomerName] = useState("");
-  const [email, setEmail] = useState("");
+  const [orderNumber, setOrderNumber] = useState(
+  initialOrder?.order_number ?? ""
+);
+
+const [customerName, setCustomerName] = useState(
+  initialOrder?.customer_name ?? ""
+);
+
+const [email, setEmail] = useState(
+  initialOrder?.email ?? ""
+);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [product, setProduct] = useState<ProductName>("Small Sling");
-  const [outerFabric, setOuterFabric] = useState("Army Green");
-  const [innerFabric, setInnerFabric] = useState("Orange");
-  const [strapSize, setStrapSize] = useState("1 inch");
-  const [strapColor, setStrapColor] = useState("Army Green");
-  const [mountingType, setMountingType] = useState("Sling Hook");
-  const [price, setPrice] = useState<number>(0);
+ const [product, setProduct] = useState<ProductName>(
+  initialOrder?.product ?? "Small Sling"
+);
+
+const [outerFabric, setOuterFabric] = useState(
+  initialOrder?.outer_fabric ?? "Army Green"
+);
+
+const [innerFabric, setInnerFabric] = useState(
+  initialOrder?.inner_fabric ?? "Orange"
+);
+
+const [strapSize, setStrapSize] = useState(
+  initialOrder?.strap_size ?? "1 inch"
+);
+
+const [strapColor, setStrapColor] = useState(
+  initialOrder?.strap_color ?? "Army Green"
+);
+
+const [mountingType, setMountingType] = useState(
+  initialOrder?.mounting_type ?? "Sling Hook"
+);
+
+const [price, setPrice] = useState<number>(
+  initialOrder?.price ?? 0
+);
 
   const selectedProduct = products[product];
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -73,13 +95,20 @@ export default function OrderForm() {
 
   // Auto-reset defaults when switching products (e.g. switching to Pouch)
   useEffect(() => {
-    setOuterFabric(selectedProduct.outerFabric[0] || "");
-    setInnerFabric(selectedProduct.innerFabric[0] || "");
-    setStrapSize(selectedProduct.strapSize[0] || "");
-    setStrapColor(selectedProduct.strapColor[0] || "");
-    setMountingType(selectedProduct.mountingType[0] || "");
-    setPrice(selectedProduct.basePrice);
-  }, [product]);
+  // When editing an existing order, preserve its saved configuration
+  // when the form first loads.
+  if (initialOrder && product === initialOrder.product) {
+    return;
+  }
+
+  // When the user changes the product, reset to that product's defaults.
+  setOuterFabric(selectedProduct.outerFabric[0] || "");
+  setInnerFabric(selectedProduct.innerFabric[0] || "");
+  setStrapSize(selectedProduct.strapSize[0] || "");
+  setStrapColor(selectedProduct.strapColor[0] || "");
+  setMountingType(selectedProduct.mountingType[0] || "");
+  setPrice(selectedProduct.basePrice);
+}, [product, initialOrder, selectedProduct]);
 
   async function generateOrderImage(currentOrderNumber: string) {
     const element = document.getElementById("order-preview");
@@ -104,54 +133,129 @@ export default function OrderForm() {
 
 async function submitOrder() {
   if (!customerName || !email) {
-    alert("Please fill in customer name and contact number.");
+    alert("Please fill in customer name and email.");
     return;
   }
 
   setIsSubmitting(true);
 
-  
+  try {
+    // ============================================================
+    // CREATE MODE
+    // ============================================================
 
-  const newOrderNumber = await generateOrderNumber();
-  setOrderNumber(newOrderNumber); // updates the preview + filename too
+    if (mode === "create") {
+      const newOrderNumber = await generateOrderNumber();
 
+      setOrderNumber(newOrderNumber);
 
-  // SUPABASE 
+      const { error } = await supabase.from("orders").insert([
+        {
+          order_number: newOrderNumber,
+          customer_name: customerName,
+          email,
+          product,
+          outer_fabric: outerFabric,
+          inner_fabric: innerFabric,
+          strap_size:
+            selectedProduct.strapSize.length > 0
+              ? strapSize
+              : null,
+          strap_color:
+            selectedProduct.strapColor.length > 0
+              ? strapColor
+              : null,
+          mounting_type:
+            selectedProduct.mountingType.length > 0
+              ? mountingType
+              : null,
+          price,
+        },
+      ]);
 
-  const { error } = await supabase.from("orders").insert([
-    {
-      order_number: newOrderNumber,
-      customer_name: customerName,
-      email: email,
-      product: product,
-      outer_fabric: outerFabric,
-      inner_fabric: innerFabric,
-      strap_size: selectedProduct.strapSize.length > 0 ? strapSize : null,
-      strap_color: selectedProduct.strapColor.length > 0 ? strapColor : null,
-      mounting_type:
-        selectedProduct.mountingType.length > 0 ? mountingType : null,
-      price: price,
+      if (error) {
+        console.error("Order save failed:", error.message);
+        alert(`Could not save order: ${error.message}`);
+        return;
+      }
 
-    },
-  ]);
+      await generateOrderImage(newOrderNumber);
 
-  setIsSubmitting(false);
+      setIsConfirmed(true);
 
-  if (error) {
-    console.error("Order save failed:", error.message);
-    alert(`Could not save order: ${error.message}`);
-    return;
+      return;
+    }
+
+    // ============================================================
+    // EDIT MODE
+    // ============================================================
+
+    if (mode === "edit" && initialOrder) {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          customer_name: customerName,
+          email,
+          product,
+          outer_fabric: outerFabric,
+          inner_fabric: innerFabric,
+          strap_size:
+            selectedProduct.strapSize.length > 0
+              ? strapSize
+              : null,
+          strap_color:
+            selectedProduct.strapColor.length > 0
+              ? strapColor
+              : null,
+          mounting_type:
+            selectedProduct.mountingType.length > 0
+              ? mountingType
+              : null,
+          price,
+        })
+        .eq("id", initialOrder.id);
+
+      if (error) {
+        console.error("Order update failed:", error.message);
+        alert(`Could not update order: ${error.message}`);
+        return;
+      }
+
+      // IMPORTANT:
+      // Editing NEVER generates a new order number.
+      await generateOrderImage(initialOrder.order_number);
+
+      window.location.href = `/orders/${initialOrder.order_number}`;
+
+      return;
+    }
+
+    console.error("Invalid OrderForm mode or missing initial order.");
+
+  } catch (error) {
+    console.error("Unexpected order submission error:", error);
+
+    alert("Something went wrong while saving the order.");
+  } finally {
+    setIsSubmitting(false);
   }
-
-  await generateOrderImage(newOrderNumber);
-  setIsConfirmed(true);
 }
+
+
 
 function startNewOrder() {
   setCustomerName("");
   setEmail("");
   setProduct("Small Sling");
   setOrderNumber("");
+
+  setOuterFabric("");
+  setInnerFabric("");
+  setStrapSize("");
+  setStrapColor("");
+  setMountingType("");
+  setPrice(products["Small Sling"].basePrice);
+
   setIsConfirmed(false);
 }
 
@@ -334,8 +438,10 @@ function startNewOrder() {
         <div className="mb-6">
           <h2 className="text-xl font-bold text-zinc-800">Order Preview</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Photo will be generated after order confirmation.
-          </p>
+  {mode === "edit"
+    ? "Review your changes before saving."
+    : "Photo will be generated after order confirmation."}
+</p>
         </div>
 
         <OrderPreview
@@ -358,7 +464,11 @@ function startNewOrder() {
           disabled={isSubmitting}
           className="mt-6 w-full rounded-lg bg-black px-5 py-3 font-medium text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
         >
-          {isSubmitting ? "Saving..." : "Confirm Order"}
+          {isSubmitting
+  ? "Saving..."
+  : mode === "edit"
+  ? "Save Changes"
+  : "Confirm Order"}
         </button>
       </div>
     </div>
