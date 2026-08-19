@@ -20,22 +20,12 @@ type Order = {
   created_at: string;
 };
 
-
 type StatusHistory = {
   id: string;
   order_id: string;
   status: string;
   created_at: string;
 };
-
-
-const STATUS_OPTIONS = [
-  "pending",
-  "confirmed",
-  "in_production",
-  "completed",
-  "cancelled",
-];
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -44,9 +34,6 @@ const STATUS_STYLES: Record<string, string> = {
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-zinc-200 text-zinc-600",
 };
-
-
-
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -74,58 +61,55 @@ export default function OrderDetailPage() {
 
       setOrder(data as Order);
 
-      // History Data
-
+      // Fetch status history
       const { data: historyData, error: historyError } = await supabase
-      .from("order_status_history")
-      .select("*")
-      .eq("order_id", data.id)
-      .order("created_at", { ascending: false });
-      
-      if (historyError) {
-        console.error("Failed to fetch order history:",
-          historyError.message);
-        } else {
-          console.log("ORDER HISTORY:", historyData);
-          setStatusHistory(historyData as StatusHistory[]);
+        .from("order_status_history")
+        .select("*")
+        .eq("order_id", data.id)
+        .order("created_at", { ascending: false });
 
-        }
+      if (historyError) {
+        console.error(
+          "Failed to fetch order history:",
+          historyError.message
+        );
+      } else {
+        console.log("ORDER HISTORY:", historyData);
+        setStatusHistory(historyData as StatusHistory[]);
+      }
+
       setIsLoading(false);
     }
 
     fetchOrder();
-    
-
-  
   }, [orderNumber]);
 
-  
-
-
   async function updateStatus(newStatus: string) {
-  if (!order) return;
+    if (!order) return;
 
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: newStatus })
-    .eq("id", order.id);
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: newStatus })
+      .eq("id", order.id);
 
-  if (error) {
-    console.error("Failed to update status:", error.message);
-    alert(`Could not update status: ${error.message}`);
-    return;
+    if (error) {
+      console.error("Failed to update status:", error.message);
+      alert(`Could not update status: ${error.message}`);
+      return;
+    }
+
+    setOrder({
+      ...order,
+      status: newStatus,
+    });
   }
-
-  setOrder({
-    ...order,
-    status: newStatus,
-  });
-}
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-5xl p-8">
-        <p className="text-sm text-zinc-500">Loading order...</p>
+      <div className="mx-auto max-w-7xl p-8">
+        <p className="text-sm text-zinc-500">
+          Loading order...
+        </p>
       </div>
     );
   }
@@ -133,7 +117,9 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <div className="mx-auto max-w-5xl p-8">
-        <h1 className="text-xl font-semibold">Order not found</h1>
+        <h1 className="text-xl font-semibold">
+          Order not found
+        </h1>
 
         <button
           onClick={() => router.push("/orders")}
@@ -146,294 +132,344 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-8">
+    <div className="mx-auto max-w-6xl px-6 py-10">
 
       {/* HEADER */}
+      <div className="mb-10">
 
-<div className="mb-8">
-
-  <button
-    onClick={() => router.push("/orders")}
-    className="mb-6 text-sm text-zinc-400 transition hover:text-white"
-  >
-    ← Back to Orders
-  </button>
-
-  <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-
-    <div>
-
-      <p className="font-mono text-sm font-medium tracking-wide text-zinc-400">
-        {order.order_number}
-      </p>
-
-      <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
-        {order.product}
-      </h1>
-
-      <p className="mt-2 text-zinc-400">
-        {order.customer_name}
-      </p>
-
-    </div>
-
-    <button
-      onClick={() =>
-        router.push(`/orders/${order.order_number}/edit`)
-      }
-      className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
-    >
-      Edit Order
-    </button>
-
-  </div>
-
-</div>
-
-
-{/* PRODUCTION STATUS */}
-
-<section className="mb-8 rounded-xl border border-zinc-700 bg-zinc-900 p-6">
-
-  <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-
-    <div>
-
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        Current Status
-      </p>
-
-      <div className="mt-3">
-        <span
-          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-            STATUS_STYLES[order.status] ??
-            "bg-zinc-100 text-zinc-600"
-          }`}
-        >
-          {order.status.replace("_", " ")}
-        </span>
-      </div>
-
-    </div>
-
-
-    <div className="flex flex-wrap gap-2">
-
-      {order.status === "confirmed" && (
         <button
-          type="button"
-          onClick={() => updateStatus("in_production")}
-          className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
+          onClick={() => router.push("/orders")}
+          className="mb-6 text-sm text-zinc-400 transition hover:text-white"
         >
-          Start Production
+          ← Back to Orders
         </button>
-      )}
 
-      {order.status === "in_production" && (
-        <button
-          type="button"
-          onClick={() => updateStatus("completed")}
-          className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
-        >
-          Mark Completed
-        </button>
-      )}
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
 
-    </div>
+          <div>
 
-  </div>
+            <p className="font-mono text-sm font-medium tracking-wide text-zinc-400">
+              {order.order_number}
+            </p>
 
-</section>
+            <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
+              {order.product}
+            </h1>
 
-{/* STATUS TIMELINE */}
-<section className="rounded-xl border bg-white p-6 md:col-span-2">
+            <p className="mt-2 text-zinc-400">
+              {order.customer_name}
+            </p>
 
-  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-    Order Timeline
-  </h2>
+          </div>
 
-  <div className="mt-6 space-y-6">
-    {statusHistory.map((history, index) => (
-      <div key={history.id} className="flex gap-4">
-
-        {/* TIMELINE DOT */}
-        <div className="flex flex-col items-center">
-
-          <div
-            className={`flex h-8 w-8 items-center justify-center rounded-full ${
-              index === 0
-                ? "bg-zinc-900 text-white"
-                : "bg-zinc-100 text-zinc-500"
-            }`}
+          <button
+            onClick={() =>
+              router.push(`/orders/${order.order_number}/edit`)
+            }
+            className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
           >
-            {index === 0 ? "✓" : "•"}
-          </div>
-
-          {index !== statusHistory.length - 1 && (
-            <div className="mt-2 h-full w-px bg-zinc-200" />
-          )}
-
-        </div>
-
-        {/* EVENT */}
-        <div className="pb-2">
-
-          <p className="font-medium capitalize">
-            {history.status.replace("_", " ")}
-          </p>
-
-          <p className="mt-1 text-xs text-zinc-400">
-            {new Date(history.created_at).toLocaleString()}
-          </p>
+            Edit Order
+          </button>
 
         </div>
 
       </div>
-    ))}
-  </div>
 
-</section>
 
-      
+      {/* PAGE CONTENT */}
+      <div className="space-y-8">
 
-      {/* MAIN CONTENT */}
-      <div className="grid gap-6 md:grid-cols-2">
 
-        {/* CUSTOMER */}
-        <section className="rounded-xl border bg-white p-6">
+        {/* CURRENT STATUS */}
+        <section className="rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
 
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Customer
-          </h2>
-
-          <div className="mt-4 space-y-3">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
 
             <div>
-              <p className="text-xs text-zinc-400">Name</p>
-              <p className="font-medium">
-                {order.customer_name}
+
+              <p className="text-xs font-medium uppercase tracking-[0.15em] text-zinc-500">
+                Current Status
               </p>
+
+              <div className="mt-3">
+
+                <span
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                    STATUS_STYLES[order.status] ??
+                    "bg-zinc-100 text-zinc-600"
+                  }`}
+                >
+                  {order.status.replace("_", " ")}
+                </span>
+
+              </div>
+
             </div>
 
-            <div>
-              <p className="text-xs text-zinc-400">Email</p>
-              <p>
-                {order.email}
+
+            {/* STATUS ACTIONS */}
+            <div className="flex flex-wrap gap-2">
+
+              {order.status === "confirmed" && (
+                <button
+                  type="button"
+                  onClick={() => updateStatus("in_production")}
+                  className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
+                >
+                  Start Production
+                </button>
+              )}
+
+              {order.status === "in_production" && (
+                <button
+                  type="button"
+                  onClick={() => updateStatus("completed")}
+                  className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
+                >
+                  Mark Completed
+                </button>
+              )}
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* INFORMATION + PRODUCTION */}
+        <div className="w-full">
+
+          <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1.8fr)_minmax(360px,0.9fr)]">
+
+
+            {/* LEFT — ORDER INFORMATION */}
+            <section className="min-w-0 rounded-2xl border bg-white p-8">
+
+
+              {/* CUSTOMER */}
+              <div>
+
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
+                  Customer
+                </p>
+
+                <div className="mt-4">
+
+                  <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">
+                    {order.customer_name}
+                  </h2>
+
+                  <p className="mt-1 text-sm text-zinc-500">
+                    {order.email}
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              {/* DIVIDER */}
+              <div className="my-8 border-t" />
+
+
+              {/* BAG CONFIGURATION */}
+              <div>
+
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
+                  Bag Configuration
+                </p>
+
+                <div className="mt-5 divide-y">
+
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-zinc-500">
+                      Outer Fabric
+                    </span>
+
+                    <span className="text-sm font-medium text-zinc-900">
+                      {order.outer_fabric}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-zinc-500">
+                      Inner Fabric
+                    </span>
+
+                    <span className="text-sm font-medium text-zinc-900">
+                      {order.inner_fabric}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-zinc-500">
+                      Strap
+                    </span>
+
+                    <span className="text-sm font-medium text-zinc-900">
+                      {order.strap_size ?? "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-zinc-500">
+                      Strap Color
+                    </span>
+
+                    <span className="text-sm font-medium text-zinc-900">
+                      {order.strap_color ?? "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-zinc-500">
+                      Mounting
+                    </span>
+
+                    <span className="text-sm font-medium text-zinc-900">
+                      {order.mounting_type ?? "—"}
+                    </span>
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* DIVIDER */}
+              <div className="my-8 border-t" />
+
+
+              {/* ORDER DETAILS */}
+              <div>
+
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
+                  Order Details
+                </p>
+
+                <div className="mt-5 space-y-4">
+
+                  <div className="flex items-center justify-between">
+
+                    <span className="text-sm text-zinc-500">
+                      Order Value
+                    </span>
+
+                    <span className="text-xl font-semibold tracking-tight text-zinc-900">
+                      ₱{order.price.toFixed(2)}
+                    </span>
+
+                  </div>
+
+                  <div className="flex items-center justify-between">
+
+                    <span className="text-sm text-zinc-500">
+                      Order Number
+                    </span>
+
+                    <span className="font-mono text-sm font-medium text-zinc-900">
+                      {order.order_number}
+                    </span>
+
+                  </div>
+
+                  <div className="flex items-center justify-between">
+
+                    <span className="text-sm text-zinc-500">
+                      Created
+                    </span>
+
+                    <span className="text-sm text-zinc-900">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </section>
+
+
+            {/* RIGHT — PRODUCTION TIMELINE */}
+            <section className="min-w-0 rounded-2xl border bg-white p-8">
+
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
+                Production
               </p>
-            </div>
+
+              <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">
+                Order Timeline
+              </h2>
+
+
+              <div className="mt-8 space-y-6">
+
+                {statusHistory.length === 0 ? (
+
+                  <p className="text-sm text-zinc-400">
+                    No status history yet.
+                  </p>
+
+                ) : (
+
+                  statusHistory.map((history, index) => (
+
+                    <div
+                      key={history.id}
+                      className="flex gap-4"
+                    >
+
+                      {/* TIMELINE DOT */}
+                      <div className="flex flex-col items-center">
+
+                        <div
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                            index === 0
+                              ? "bg-zinc-900 text-white"
+                              : "bg-zinc-100 text-zinc-500"
+                          }`}
+                        >
+                          {index === 0 ? "✓" : "•"}
+                        </div>
+
+                        {index !== statusHistory.length - 1 && (
+                          <div className="mt-2 h-full w-px bg-zinc-200" />
+                        )}
+
+                      </div>
+
+
+                      {/* EVENT */}
+                      <div className="pb-2">
+
+                        <p className="font-medium capitalize text-zinc-900">
+                          {history.status.replace("_", " ")}
+                        </p>
+
+                        <p className="mt-1 text-xs text-zinc-400">
+                          {new Date(history.created_at).toLocaleString()}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  ))
+
+                )}
+
+              </div>
+
+            </section>
+
 
           </div>
 
-        </section>
+        </div>
 
-        {/* ORDER CONFIGURATION */}
-        <section className="rounded-xl border bg-white p-6">
-
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Configuration
-          </h2>
-
-          <div className="mt-4 space-y-3">
-
-            <div className="flex justify-between">
-              <span className="text-zinc-500">
-                Outer Fabric
-              </span>
-
-              <span className="font-medium">
-                {order.outer_fabric}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-zinc-500">
-                Inner Fabric
-              </span>
-
-              <span className="font-medium">
-                {order.inner_fabric}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-zinc-500">
-                Strap
-              </span>
-
-              <span className="font-medium">
-                {order.strap_size ?? "—"}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-zinc-500">
-                Strap Color
-              </span>
-
-              <span className="font-medium">
-                {order.strap_color ?? "—"}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-zinc-500">
-                Mounting
-              </span>
-
-              <span className="font-medium">
-                {order.mounting_type ?? "—"}
-              </span>
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* PRICE */}
-        <section className="rounded-xl border bg-white p-6">
-
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Order Value
-          </h2>
-
-          <p className="mt-4 text-3xl font-bold">
-            ₱{order.price.toFixed(2)}
-          </p>
-
-        </section>
-
-        {/* ORDER INFORMATION */}
-        <section className="rounded-xl border bg-white p-6">
-
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Order Information
-          </h2>
-
-          <div className="mt-4 space-y-3">
-
-            <div className="flex justify-between">
-              <span className="text-zinc-500">
-                Order Number
-              </span>
-
-              <span className="font-mono font-medium">
-                {order.order_number}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-zinc-500">
-                Created
-              </span>
-
-              <span>
-                {new Date(order.created_at).toLocaleDateString()}
-              </span>
-            </div>
-
-          </div>
-
-        </section>
 
       </div>
 
