@@ -20,6 +20,15 @@ type Order = {
   created_at: string;
 };
 
+
+const STATUS_OPTIONS = [
+  "pending",
+  "confirmed",
+  "in_production",
+  "completed",
+  "cancelled",
+];
+
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-blue-100 text-blue-800",
@@ -27,6 +36,9 @@ const STATUS_STYLES: Record<string, string> = {
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-zinc-200 text-zinc-600",
 };
+
+
+
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -58,6 +70,27 @@ export default function OrderDetailPage() {
     fetchOrder();
   }, [orderNumber]);
 
+
+  async function updateStatus(newStatus: string) {
+  if (!order) return;
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: newStatus })
+    .eq("id", order.id);
+
+  if (error) {
+    console.error("Failed to update status:", error.message);
+    alert(`Could not update status: ${error.message}`);
+    return;
+  }
+
+  setOrder({
+    ...order,
+    status: newStatus,
+  });
+}
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-5xl p-8">
@@ -85,42 +118,61 @@ export default function OrderDetailPage() {
     <div className="mx-auto max-w-5xl p-8">
 
       {/* HEADER */}
-      <div className="mb-8 flex items-start justify-between">
 
-        <div>
-          <button
-            onClick={() => router.push("/orders")}
-            className="mb-4 text-sm text-zinc-500 hover:text-zinc-900"
-          >
-            ← Back to Orders
-          </button>
+<div className="mb-8">
 
-          <p className="font-mono text-sm text-zinc-500">
-            {order.order_number}
-          </p>
+  <button
+    onClick={() => router.push("/orders")}
+    className="mb-6 text-sm text-zinc-400 transition hover:text-white"
+  >
+    ← Back to Orders
+  </button>
 
-          <h1 className="mt-1 text-3xl font-bold">
-            {order.product}
-          </h1>
+  <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
 
-          <p className="mt-1 text-zinc-500">
-            {order.customer_name}
-          </p>
-        </div>
+    <div>
 
-        <button
-          onClick={() =>
-            router.push(`/orders/${order.order_number}/edit`)
-          }
-          className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-        >
-          Edit Order
-        </button>
+      <p className="font-mono text-sm font-medium tracking-wide text-zinc-400">
+        {order.order_number}
+      </p>
 
-      </div>
+      <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
+        {order.product}
+      </h1>
 
-      {/* STATUS */}
-      <div className="mb-8">
+      <p className="mt-2 text-zinc-400">
+        {order.customer_name}
+      </p>
+
+    </div>
+
+    <button
+      onClick={() =>
+        router.push(`/orders/${order.order_number}/edit`)
+      }
+      className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
+    >
+      Edit Order
+    </button>
+
+  </div>
+
+</div>
+
+
+{/* PRODUCTION STATUS */}
+
+<section className="mb-8 rounded-xl border border-zinc-700 bg-zinc-900 p-6">
+
+  <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+
+    <div>
+
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+        Current Status
+      </p>
+
+      <div className="mt-3">
         <span
           className={`rounded-full px-3 py-1.5 text-xs font-medium ${
             STATUS_STYLES[order.status] ??
@@ -130,6 +182,39 @@ export default function OrderDetailPage() {
           {order.status.replace("_", " ")}
         </span>
       </div>
+
+    </div>
+
+
+    <div className="flex flex-wrap gap-2">
+
+      {order.status === "confirmed" && (
+        <button
+          type="button"
+          onClick={() => updateStatus("in_production")}
+          className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
+        >
+          Start Production
+        </button>
+      )}
+
+      {order.status === "in_production" && (
+        <button
+          type="button"
+          onClick={() => updateStatus("completed")}
+          className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
+        >
+          Mark Completed
+        </button>
+      )}
+
+    </div>
+
+  </div>
+
+</section>
+
+      
 
       {/* MAIN CONTENT */}
       <div className="grid gap-6 md:grid-cols-2">

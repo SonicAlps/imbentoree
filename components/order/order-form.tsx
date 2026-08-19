@@ -140,9 +140,8 @@ async function submitOrder() {
   setIsSubmitting(true);
 
   try {
-    // ============================================================
     // CREATE MODE
-    // ============================================================
+   
 
     if (mode === "create") {
       const newOrderNumber = await generateOrderNumber();

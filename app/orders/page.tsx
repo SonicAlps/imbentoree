@@ -38,12 +38,17 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-zinc-200 text-zinc-600",
 };
 
+
+
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   const pendingCount = orders.filter(
   (order) => order.status === "pending"
@@ -139,6 +144,8 @@ const completedCount = orders.filter(
     </p>
   </div>
 
+  
+
 
 </div>
 
@@ -197,6 +204,8 @@ const completedCount = orders.filter(
       {inProductionCount}
     </p>
   </button>
+
+  
 
   <button
     type="button"
@@ -258,6 +267,7 @@ const completedCount = orders.filter(
     {searchQuery.trim() && " found"}
   </p>
 
+
   {(searchQuery || statusFilter !== "all") && (
     <button
       type="button"
@@ -270,8 +280,9 @@ const completedCount = orders.filter(
       Clear filters
     </button>
   )}
-</div>
 
+  
+</div>
 
 
       {isLoading ? (
