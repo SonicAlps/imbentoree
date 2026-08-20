@@ -30,7 +30,7 @@ export default function TrackOrderPage() {
         .from("orders")
         .select("*")
         .eq("tracking_token", token)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("TRACKING ERROR:", error);
