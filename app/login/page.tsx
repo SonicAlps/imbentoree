@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";  // ← ADD THIS
+import Image from "next/image"; 
 import { supabase } from "@/src/lib/supabase";
 
 
@@ -58,13 +58,12 @@ export default function LoginPage() {
       {/* ← UPDATED THIS SECTION */}
       <div className="mb-8 flex items-center gap-4">
         <Image
-          src="/logo.png"
-          alt="Imbentoree Logo"
-          width={60}
-          height={60}
-          className="rounded-md object-contain"
-          priority
-        />
+        src="/logo.png"
+        alt="Imbentoree Logo"
+        width={80}
+        height={80}
+        className="rounded-md object-contain"
+        priority />
         
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">
