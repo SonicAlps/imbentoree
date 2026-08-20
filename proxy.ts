@@ -37,11 +37,16 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   console.log(
-  "PROXY AUTH:",
-  user ? `Logged in as ${user.email}` : "NO USER"
-);
+    "PROXY AUTH:",
+    user ? `Logged in as ${user.email}` : "NO USER"
+  );
 
   const pathname = request.nextUrl.pathname;
+
+  // ← ADD THIS: Allow public access to tracker
+  if (pathname.startsWith("/track/")) {
+    return response;
+  }
 
   if (!user && pathname !== "/login") {
     return NextResponse.redirect(new URL("/login", request.url));
