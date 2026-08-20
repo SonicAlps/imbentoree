@@ -1,6 +1,6 @@
 // app/orders/new/page.tsx
-import OrderForm from "@/components/order/order-form";
-import OrderPageLayout from "@/components/order/order-page-layout";
+import OrderForm from "@/app/(admin)/components/order/order-form";
+import OrderPageLayout from "@/app/(admin)/components/order/order-page-layout";
 
 export default function NewOrderPage() {
   return (

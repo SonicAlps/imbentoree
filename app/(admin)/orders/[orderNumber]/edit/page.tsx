@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import OrderForm from "@/components/order/order-form";
-import OrderPageLayout from "@/components/order/order-page-layout";
+import OrderForm from "@/app/(admin)/components/order/order-form";
+import OrderPageLayout from "@/app/(admin)/components/order/order-page-layout";
 import { supabase } from "@/src/lib/supabase";
 
 

@@ -289,11 +289,11 @@ export default function OrderForm({
         <span className="text-2xl">✓</span>
       </div>
 
-      <h2 className="text-xl font-semibold">
+      <h2 className="text-xl font-semibold text-zinc-900">
         Order Confirmed!
       </h2>
 
-      <p className="mt-2 text-sm text-zinc-500">
+      <p className="mt-2 text-sm text-zinc-900">
         Order{" "}
         <span className="font-mono font-medium">
           {orderNumber}
