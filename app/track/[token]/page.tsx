@@ -33,10 +33,11 @@ export default function TrackOrderPage() {
         .single();
 
       if (error) {
-        setError("Order not found");
+        console.error("TRACKING ERROR:", error);
+        setError(error.message);
         setLoading(false);
         return;
-      }
+    }
 
       setOrder(data as OrderTracking);
       setLoading(false);
