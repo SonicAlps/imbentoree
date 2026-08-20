@@ -2,26 +2,37 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/src/lib/supabase";  // ← ADD THIS
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();  // ← ADD THIS
 
   const navLinks = [
     { name: "Dashboard", href: "/" },
     { name: "New Order", href: "/new-order" },
     { name: "Orders", href: "/orders" },
-    
   ];
+
+  // ← ADD THIS FUNCTION
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/login");  // Redirect to login page
+  }
+
+  if (pathname === "/login") {
+    return null;  // Don't render navbar on login page
+  }
 
   return (
     <>
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-15 py-4">
           {/* LOGO & BRANDING */}
           <Link href="/" className="flex items-center gap-3 group">
             <Image
-              src="/logo.png" // Place your logo in /public/logo.png
+              src="/logo.png"
               alt="Imbentoree Logo"
               width={80}
               height={80}
@@ -54,7 +65,15 @@ export function Navbar() {
                 </Link>
               );
             })}
-            <span className="font-mono text-xs text-zinc-400">V1 · Dashboard</span>
+            <span className="font-mono text-xs text-zinc-400">V1.5 · Dashboard</span>
+
+            {/* ← ADD LOGOUT BUTTON */}
+            <button
+              onClick={handleLogout}
+              className="ml-4 rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition"
+            >
+              Logout
+            </button>
           </nav>
         </div>
       </header>

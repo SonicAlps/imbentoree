@@ -1,11 +1,14 @@
+// app/orders/[orderNumber]/edit/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import OrderForm from "@/components/order/order-form";
+import OrderPageLayout from "@/components/order/order-page-layout";
 import { supabase } from "@/src/lib/supabase";
 
-type Order = {
+
+type ExistingOrder = {
   id: string;
   order_number: string;
   customer_name: string;
@@ -18,21 +21,23 @@ type Order = {
   mounting_type: string | null;
   status: string;
   price: number;
+  target_completion_date: string | null;
   created_at: string;
+  tracking_token: string;
+
 };
 
 export default function EditOrderPage() {
   const params = useParams();
   const orderNumber = params.orderNumber as string;
 
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<ExistingOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchOrder() {
       setIsLoading(true);
-
       const { data, error } = await supabase
         .from("orders")
         .select("*")
@@ -46,7 +51,7 @@ export default function EditOrderPage() {
         return;
       }
 
-      setOrder(data as Order);
+      setOrder(data as ExistingOrder);
       setIsLoading(false);
     }
 
@@ -55,44 +60,33 @@ export default function EditOrderPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-6xl p-8">
+      <OrderPageLayout
+        title="Loading..."
+        subtitle="Fetching order details"
+      >
         <p className="text-sm text-zinc-500">Loading order...</p>
-      </div>
+      </OrderPageLayout>
     );
   }
 
   if (error || !order) {
     return (
-      <div className="mx-auto max-w-6xl p-8">
-        <h1 className="text-xl font-semibold">Order not found</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          {error || "We couldn't find this order."}
-        </p>
-      </div>
+      <OrderPageLayout
+        title="Order not found"
+        subtitle={error || "We couldn't find this order."}
+      >
+        <div />
+      </OrderPageLayout>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
-      <div className="mb-6">
-        <p className="font-mono text-sm text-zinc-500">
-          {order.order_number}
-        </p>
-
-        <h1 className="mt-1 text-2xl font-bold">
-          Edit Order
-        </h1>
-
-        <p className="mt-1 text-sm text-zinc-500">
-            Review and update this order. The order number is permanently assigned
-            to this bag.
-</p>
-      </div>
-
-      <OrderForm
-        mode="edit"
-        initialOrder={order}
-      />
-    </div>
+    <OrderPageLayout
+      title="Edit Order"
+      subtitle="Review and update this order. The order number is permanently assigned to this bag."
+      orderNumber={order.order_number}
+    >
+      <OrderForm mode="edit" initialOrder={order} />
+    </OrderPageLayout>
   );
 }

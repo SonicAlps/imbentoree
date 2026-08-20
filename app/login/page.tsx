@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";  // ← ADD THIS
 import { supabase } from "@/src/lib/supabase";
 
 
@@ -14,46 +15,58 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   async function handleLogin(e: React.FormEvent) {
-  e.preventDefault();
+    e.preventDefault();
 
-  console.log("1. Login submitted");
+    console.log("1. Login submitted");
 
-  setIsLoading(true);
-  setErrorMessage("");
+    setIsLoading(true);
+    setErrorMessage("");
 
-  console.log("2. About to call Supabase");
+    console.log("2. About to call Supabase");
 
-  try {
-    const result = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const result = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    console.log("3. Supabase returned:", result);
+      console.log("3. Supabase returned:", result);
 
-    if (result.error) {
-      console.log("4. Supabase error:", result.error);
+      if (result.error) {
+        console.log("4. Supabase error:", result.error);
 
-      setErrorMessage(result.error.message);
+        setErrorMessage(result.error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("5. Login successful");
+
+      router.push("/orders");
+    } catch (err) {
+      console.error("6. Login threw an exception:", err);
+      setErrorMessage("Something went wrong while signing in.");
       setIsLoading(false);
-      return;
     }
-
-    console.log("5. Login successful");
-
-    router.push("/orders");;
-  } catch (err) {
-    console.error("6. Login threw an exception:", err);
-    setErrorMessage("Something went wrong while signing in.");
-    setIsLoading(false);
   }
-}
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6">
-      <div className="w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm">
+  <div className="flex min-h-screen flex-col items-center justify-start bg-zinc-100 px-6 pt-20">
 
-        <div className="mb-8">
+    <div className="w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm">
+
+      {/* ← UPDATED THIS SECTION */}
+      <div className="mb-8 flex items-center gap-4">
+        <Image
+          src="/logo.png"
+          alt="Imbentoree Logo"
+          width={60}
+          height={60}
+          className="rounded-md object-contain"
+          priority
+        />
+        
+        <div>
           <h1 className="text-2xl font-bold text-zinc-900">
             Imbentoree
           </h1>
@@ -62,6 +75,7 @@ export default function LoginPage() {
             Sign in to manage your orders.
           </p>
         </div>
+      </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
 
