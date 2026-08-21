@@ -10,10 +10,9 @@ export function Navbar() {
   const router = useRouter();  // ← ADD THIS
 
   const navLinks = [
-    { name: "Dashboard", href: "/" },
-    { name: "New Order", href: "/new-order" },
-    { name: "Orders", href: "/orders" },
-  ];
+  { name: "Dashboard", href: "/" },
+  { name: "Orders", href: "/orders" },  // ← "New Order" removed
+];
 
   // ← ADD THIS FUNCTION
   async function handleLogout() {
@@ -65,7 +64,13 @@ export function Navbar() {
                 </Link>
               );
             })}
-            <span className="font-mono text-xs text-zinc-400">V1.5 · Dashboard</span>
+            <Link
+            href="/new-order"
+            className="rounded-lg bg-red-300 px-4 py-2 text-sm font-medium text-red-900 hover:bg-zinc-300 transition">
+              New Order + 
+              </Link>
+
+<span className="font-mono text-xs text-zinc-400">V1.5 · Dashboard</span>
 
             {/* ← ADD LOGOUT BUTTON */}
             <button
