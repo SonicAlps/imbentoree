@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/src/lib/supabase";
+import PhotoUpload from "@/app/(admin)/components/order/photo-upload";
+import OrderPhotoDisplay from "@/app/(admin)/components/order/order-photo-display";
 
 type OrderTracking = {
   id: string;
@@ -14,6 +16,12 @@ type OrderTracking = {
   target_completion_date: string | null;
 };
 
+type OrderPhoto = {
+  photo_url: string;
+  caption: string | null;
+  uploaded_at: string;
+};
+
 export default function TrackOrderPage() {
   const params = useParams();
   const token = params.token as string;
@@ -21,6 +29,7 @@ export default function TrackOrderPage() {
   const [order, setOrder] = useState<OrderTracking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [photo, setPhoto] = useState<OrderPhoto | null>(null);
 
   useEffect(() => {
     async function fetchOrder() {
@@ -41,6 +50,19 @@ export default function TrackOrderPage() {
         setError("We couldn't find this order.");
         setLoading(false);
         return;
+      }
+
+      // Fetch latest photo
+        const { data: photoData } = await supabase
+         .from("order_photos")
+         .select("photo_url, caption, uploaded_at")
+         .eq("order_id", (data as any).id)
+         .order("uploaded_at", { ascending: false })
+         .limit(1)
+         .maybeSingle();
+
+      if (photoData) {
+          setPhoto(photoData as OrderPhoto);
       }
 
       setOrder(data as OrderTracking);
@@ -107,83 +129,113 @@ export default function TrackOrderPage() {
         </div>
 
         {/* Order card */}
-        <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
+<div className="overflow-hidden rounded-3xl bg-white shadow-sm">
 
-          {/* Order header */}
-          <div className="border-b border-zinc-100 p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
-              Order Number
-            </p>
+  {/* Order header */}
+  <div className="border-b border-zinc-100 p-6">
+    <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+      Order Number
+    </p>
 
-            <p className="mt-1 font-mono text-xl font-bold text-zinc-900">
-              {order.order_number}
-            </p>
-          </div>
+    <p className="mt-1 font-mono text-xl font-bold text-zinc-900">
+      {order.order_number}
+    </p>
+  </div>
 
-          {/* Order details */}
-          <div className="space-y-6 p-6">
+  {/* Expected Ready - Small & Improved */}
+  {order.target_completion_date && (
+    <div className="border-b border-zinc-100 px-6 py-4 bg-zinc-50">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          Expected Ready
+        </p>
+        <p className="text-lg font-semibold text-zinc-900">
+          {new Date(
+            order.target_completion_date
+          ).toLocaleDateString("en-PH", {
+            month: "short",
+            day: "numeric",
+          })}
+        </p>
+      </div>
+    </div>
+  )}
 
-            <div>
-              <p className="text-sm text-zinc-500">
-                Customer
-              </p>
+  {/* Order details */}
+  <div className="space-y-6 p-6">
 
-              <p className="mt-1 text-lg font-medium text-zinc-900">
-                {order.customer_name}
-              </p>
-            </div>
+    <div>
+      <p className="text-sm text-zinc-500">
+        Customer
+      </p>
 
-            <div>
-              <p className="text-sm text-zinc-500">
-                Product
-              </p>
+      <p className="mt-1 text-lg font-medium text-zinc-900">
+        {order.customer_name}
+      </p>
+    </div>
 
-              <p className="mt-1 text-lg font-medium text-zinc-900">
-                {order.product}
-              </p>
-            </div>
+    <div>
+      <p className="text-sm text-zinc-500">
+        Product
+      </p>
 
-            {/* Status */}
-            <div>
-              <p className="text-sm text-zinc-500">
-                Production Status
-              </p>
+      <p className="mt-1 text-lg font-medium text-zinc-900">
+        {order.product}
+      </p>
+    </div>
 
-              <div className="mt-3 flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
-                <div
-                  className={`h-3 w-3 rounded-full ${
-                    order.status === "completed"
-                      ? "bg-green-500"
-                      : "bg-yellow-500"
-                  }`}
-                />
+    {/* Status */}
+    <div>
+      <p className="text-sm text-zinc-500">
+        Production Status
+      </p>
 
-                <span className="font-medium capitalize text-zinc-900">
-                  {order.status}
-                </span>
-              </div>
-            </div>
+      <div className="mt-3 flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
+        <div
+          className={`h-3 w-3 rounded-full ${
+            order.status === "completed"
+              ? "bg-green-500"
+              : "bg-yellow-500"
+          }`}
+        />
 
-            {/* Target date */}
-            {order.target_completion_date && (
-              <div>
-                <p className="text-sm text-zinc-500">
-                  Expected Ready
-                </p>
+        <span className="font-medium capitalize text-zinc-900">
+          {order.status}
+        </span>
+      </div>
+    </div>
 
-                <p className="mt-1 text-lg font-medium text-zinc-900">
-                  {new Date(
-                    order.target_completion_date
-                  ).toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+    {/* Photo - As is */}
+    {photo && (
+      <div className="mt-6">
+        <img
+          src={photo.photo_url}
+          alt="Progress photo"
+          className="mx-auto max-w-sm rounded-2xl object-cover"
+          style={{ maxHeight: "300px" }}
+        />
+
+        {photo.caption && (
+          <p className="mt-4 text-center text-sm text-zinc-700 italic">
+            "{photo.caption}"
+          </p>
+        )}
+
+        <p className="mt-2 text-center text-xs text-zinc-400">
+          {new Date(photo.uploaded_at).toLocaleString("en-PH")}
+        </p>
+      </div>
+    )}
+
+    {/* Help */}
+    <div className="pt-4 border-t border-zinc-100">
+      <p className="text-xs text-zinc-500">
+        Questions? Reach out to us at{" "}
+        <span className="font-medium text-zinc-700">imbentobags@gmail.com</span>
+      </p>
+    </div>
+  </div>
+</div>
 
         {/* Footer */}
         <p className="mt-8 text-center text-xs text-zinc-400">

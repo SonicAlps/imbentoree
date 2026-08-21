@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/src/lib/supabase";
+import PhotoUpload from "@/app/(admin)/components/order/photo-upload";
+import OrderPhotoDisplay from "@/app/(admin)/components/order/order-photo-display";
 
 type Order = {
   id: string;
@@ -393,77 +395,70 @@ export default function OrderDetailPage() {
             </section>
 
 
-            {/* RIGHT — PRODUCTION TIMELINE */}
-            <section className="min-w-0 rounded-2xl border bg-white p-8">
+            {/* RIGHT — PRODUCTION */}
+<div className="min-w-0 space-y-8">
+  {/* Photo Display */}
+  <OrderPhotoDisplay orderId={order.id} />
 
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
-                Production
-              </p>
+  {/* Photo Upload */}
+  <PhotoUpload
+    orderId={order.id}
+    orderNumber={order.order_number}
+    onPhotoAdded={() => {
+      // Optionally refresh data here
+      window.location.reload();
+    }}
+  />
 
-              <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">
-                Order Timeline
-              </h2>
+  {/* Timeline */}
+  <section className="rounded-2xl border bg-white p-8">
+    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
+      Production
+    </p>
 
+    <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">
+      Order Timeline
+    </h2>
 
-              <div className="mt-8 space-y-6">
-
-                {statusHistory.length === 0 ? (
-
-                  <p className="text-sm text-zinc-400">
-                    No status history yet.
-                  </p>
-
-                ) : (
-
-                  statusHistory.map((history, index) => (
-
-                    <div
-                      key={history.id}
-                      className="flex gap-4"
-                    >
-
-                      {/* TIMELINE DOT */}
-                      <div className="flex flex-col items-center">
-
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                            index === 0
-                              ? "bg-zinc-900 text-white"
-                              : "bg-zinc-100 text-zinc-500"
-                          }`}
-                        >
-                          {index === 0 ? "✓" : "•"}
-                        </div>
-
-                        {index !== statusHistory.length - 1 && (
-                          <div className="mt-2 h-full w-px bg-zinc-200" />
-                        )}
-
-                      </div>
-
-
-                      {/* EVENT */}
-                      <div className="pb-2">
-
-                        <p className="font-medium capitalize text-zinc-900">
-                          {history.status.replace("_", " ")}
-                        </p>
-
-                        <p className="mt-1 text-xs text-zinc-400">
-                          {new Date(history.created_at).toLocaleString()}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                  ))
-
-                )}
-
+    <div className="mt-8 space-y-6">
+      {statusHistory.length === 0 ? (
+        <p className="text-sm text-zinc-400">
+          No status history yet.
+        </p>
+      ) : (
+        statusHistory.map((history, index) => (
+          <div key={history.id} className="flex gap-4">
+            <div className="flex flex-col items-center">
+              <div
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                  index === 0
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-100 text-zinc-500"
+                }`}
+              >
+                {index === 0 ? "✓" : "•"}
               </div>
 
-            </section>
+              {index !== statusHistory.length - 1 && (
+                <div className="mt-2 h-full w-px bg-zinc-200" />
+              )}
+            </div>
+
+            <div className="pb-2">
+              <p className="font-medium capitalize text-zinc-900">
+                {history.status.replace("_", " ")}
+              </p>
+
+              <p className="mt-1 text-xs text-zinc-400">
+                {new Date(history.created_at).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </section>
+</div>
 
 
           </div>
