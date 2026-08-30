@@ -222,7 +222,14 @@ export default function TrackOrderPage() {
         )}
 
         <p className="mt-2 text-center text-xs text-zinc-400">
-          {new Date(photo.uploaded_at).toLocaleString("en-PH")}
+          {new Date(photo.uploaded_at).toLocaleDateString("en-PH", { 
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+})}
         </p>
       </div>
     )}
