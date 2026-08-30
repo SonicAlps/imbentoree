@@ -211,14 +211,18 @@ fetchActionNeeded();
     </h4>
     <div className="space-y-2">
       {pendingOrdersList.map((order) => {
-        const daysOld = Math.floor(
-          (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
-        );
-        const daysLeft = order.target_completion_date
-          ? Math.ceil(
-              (new Date(order.target_completion_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-            )
-          : null;
+    // Get current time in Philippine timezone (UTC+8)
+    const phtNow = new Date(Date.now() + (8 * 60 * 60 * 1000) - (new Date().getTimezoneOffset() * 60 * 1000));
+    
+    const daysOld = Math.floor(
+      (phtNow.getTime() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    
+    const daysLeft = order.target_completion_date
+      ? Math.ceil(
+          (new Date(order.target_completion_date).getTime() - phtNow.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      : null;
         
         return (
           <Link
@@ -260,14 +264,20 @@ fetchActionNeeded();
     </h4>
     <div className="space-y-2">
       {inProductionOrdersList.map((order) => {
+        const getPHTNow = () => {
+          const now = new Date();
+          return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        };
+        const phtNow = getPHTNow();
         const daysActive = Math.floor(
-          (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
-        );
-        const daysLeft = order.target_completion_date
-          ? Math.ceil(
-              (new Date(order.target_completion_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-            )
-          : null;
+      (phtNow.getTime() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    
+    const daysLeft = order.target_completion_date
+      ? Math.ceil(
+          (new Date(order.target_completion_date).getTime() - phtNow.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      : null;
 
         return (
           <Link

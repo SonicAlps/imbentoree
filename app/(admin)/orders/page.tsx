@@ -330,7 +330,11 @@ export default function OrdersPage() {
                     {order.mounting_type ? ` · ${order.mounting_type}` : ""}
                   </td>
                   <td className="px-4 py-3 text-xs text-zinc-800">
-                    {new Date(order.created_at).toLocaleDateString()}
+                    {new Date(order.created_at).toLocaleString("en-PH", {
+                      timeZone: "Asia/Manila",
+                      dateStyle: "medium",
+                      timeStyle: "short",
+  })}
                   </td>
                   <td className="px-4 py-3">
                     <select
