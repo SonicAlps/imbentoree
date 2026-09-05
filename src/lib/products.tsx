@@ -12,7 +12,7 @@ export const products = {
     outerFabric: ["Black", "Army Green", "Red", "Dark Pink", "Orange", "Neon Green"],
     innerFabric: ["Black", "Army Green", "Red", "Dark Pink", "Orange", "Neon Green"],
     strapSize: ["1 inch", "1.5 inch", "Paracord"],
-    strapColor: ["Black","Army Green"],
+    strapColor: ["Black","Army Green", "Orange", "Red"],
     mountingType: ["Sling Hook", "Buckle"],
     basePrice: 1500,
   },
