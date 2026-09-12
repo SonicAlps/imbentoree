@@ -2,7 +2,7 @@
 
 import { toCamelCaseName } from "@/src/lib/format";
 import Image from "next/image";
-import  QRCodeSVG  from "react-qr-code"
+import QRCodeSVG from "react-qr-code";
 
 interface OrderPreviewProps {
   orderNumber: string;
@@ -10,12 +10,11 @@ interface OrderPreviewProps {
   product: string;
   outerFabric: string;
   innerFabric: string;
-  strapSize: string
-  strapColor: string;
-  mountingType: string;
+  strapMaterial: string;
+  hardware: string;
   price: number;
   targetCompletionDate: string;
-  trackingToken?: string
+  trackingToken?: string;
 }
 
 export default function OrderPreview({
@@ -24,32 +23,32 @@ export default function OrderPreview({
   product,
   outerFabric,
   innerFabric,
-  strapSize,
-  strapColor,
-  mountingType,
+  strapMaterial,
+  hardware,
   price,
   targetCompletionDate,
   trackingToken,
 }: OrderPreviewProps) {
   const fileName = `${orderNumber}-${toCamelCaseName(customerName)}.png`;
-  const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/track/${trackingToken}`;
+
+  const trackingUrl =
+    trackingToken && process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/track/${trackingToken}`
+      : "";
 
   return (
     <div
-  id="order-preview"
-  style={{ minHeight: "480px" }}
-  className="flex w-full flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm overflow-hidden"
->
+      id="order-preview"
+      style={{ minHeight: "480px" }}
+      className="flex w-full flex-col justify-between overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm"
+      data-filename={fileName}
+    >
       {/* MAIN TOP CONTENT */}
-
       <div className="w-full">
-
         {/* HEADER */}
         <div className="flex items-center justify-between border-b pb-4">
-
           {/* LOGO + TITLE */}
           <div className="flex items-center gap-3">
-
             <Image
               src="/logo.png"
               alt="Imbento Bags"
@@ -67,22 +66,17 @@ export default function OrderPreview({
                 Custom Order Ticket
               </p>
             </div>
-
           </div>
 
           {/* ORDER NUMBER */}
           <span className="rounded bg-black px-2.5 py-1 font-mono text-xs font-medium text-white">
             {orderNumber || "NEW ORDER"}
           </span>
-
         </div>
-
 
         {/* CUSTOMER */}
         <div className="mt-6 space-y-3 text-sm">
-
           <div className="flex justify-between border-b pb-2">
-
             <span className="text-zinc-500">
               Customer:
             </span>
@@ -90,17 +84,12 @@ export default function OrderPreview({
             <span className="font-semibold">
               {customerName || "—"}
             </span>
-
           </div>
-
         </div>
-
 
         {/* SPECIFICATIONS */}
         <div className="mt-6 space-y-3 text-sm">
-
           <div className="flex justify-between border-b pb-2">
-
             <span className="text-zinc-500">
               Product:
             </span>
@@ -108,85 +97,59 @@ export default function OrderPreview({
             <span className="font-semibold">
               {product}
             </span>
-
           </div>
 
-
-          <div className="flex justify-between border-b pb-2">
-
-            <span className="text-zinc-500">
-              Outer Fabric:
-            </span>
-
-            <span className="font-medium">
-              {outerFabric}
-            </span>
-
-          </div>
-
-
-          <div className="flex justify-between border-b pb-2">
-
-            <span className="text-zinc-500">
-              Inner Fabric:
-            </span>
-
-            <span className="font-medium">
-              {innerFabric}
-            </span>
-
-          </div>
-
-
-          {strapSize && (
+          {outerFabric && (
             <div className="flex justify-between border-b pb-2">
-
               <span className="text-zinc-500">
-                Strap Size:
+                Outer Fabric:
               </span>
 
               <span className="font-medium">
-                {strapSize}
+                {outerFabric}
               </span>
-
             </div>
           )}
 
-
-          {strapColor && (
+          {innerFabric && (
             <div className="flex justify-between border-b pb-2">
-
               <span className="text-zinc-500">
-                Strap Color:
+                Inner Fabric:
               </span>
 
               <span className="font-medium">
-                {strapColor}
+                {innerFabric}
               </span>
-
             </div>
           )}
 
-
-          {mountingType && (
+          {strapMaterial && (
             <div className="flex justify-between border-b pb-2">
-
               <span className="text-zinc-500">
-                Strap Mounting:
+                Strap:
               </span>
 
               <span className="font-medium">
-                {mountingType}
+                {strapMaterial}
               </span>
-
             </div>
           )}
 
+          {hardware && (
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-zinc-500">
+                Hardware:
+              </span>
+
+              <span className="font-medium">
+                {hardware}
+              </span>
+            </div>
+          )}
 
           {/* TARGET COMPLETION */}
           {targetCompletionDate && (
             <div className="mt-6 flex items-center justify-between rounded-lg bg-zinc-100 px-3 py-2.5">
-
               <span className="text-sm font-semibold text-zinc-600">
                 Target Completion
               </span>
@@ -200,14 +163,11 @@ export default function OrderPreview({
                   day: "numeric",
                 })}
               </span>
-
             </div>
           )}
 
-
           {/* TOTAL */}
           <div className="mt-6 flex items-center justify-between">
-
             <span className="text-sm font-medium text-zinc-500">
               Total
             </span>
@@ -215,25 +175,19 @@ export default function OrderPreview({
             <span className="rounded bg-black px-3 py-1.5 font-mono text-lg font-bold text-white">
               ₱{price.toFixed(2)}
             </span>
-
           </div>
-
         </div>
-
       </div>
 
-
       {/* FOOTER */}
-      {/* FOOTER */}
-<div className="mt-8 flex items-center justify-between border-t border-dashed border-zinc-200 pt-4">
-
+      <div className="mt-8 flex items-center justify-between border-t border-dashed border-zinc-200 pt-4">
         <span className="block text-xs font-medium text-zinc-400">
           Thank you, {customerName || "customer"}, for ordering the{" "}
           {product}!
         </span>
 
         {/* QR CODE */}
-        {trackingToken && (
+        {trackingUrl && (
           <div className="flex flex-col items-center gap-1">
             <QRCodeSVG
               value={trackingUrl}
@@ -242,12 +196,13 @@ export default function OrderPreview({
               bgColor="white"
               fgColor="black"
             />
-            <p className="text-xs text-zinc-500">Scan to track</p>
+
+            <p className="text-xs text-zinc-500">
+              Scan to track
+            </p>
           </div>
         )}
-
       </div>
-
     </div>
   );
 }

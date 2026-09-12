@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,18 +6,25 @@ import OrderPreview from "./order-preview";
 import { supabase } from "@/src/lib/supabase";
 import { toCamelCaseName } from "@/src/lib/format";
 import { products, type ProductName } from "@/src/lib/products";
-import { v4 as uuidv4 } from 'uuid';
-
 
 async function generateOrderNumber(): Promise<string> {
   const { data, error } = await supabase.rpc("generate_order_number");
 
   if (error) {
     console.error("Failed to generate order number:", error.message);
-    return `IMB-ERROR-${Date.now()}`;
+    return `IMB-ERROR-${Date.now()}`; // fallback so the app doesn't crash
   }
 
   return data as string;
+}
+
+
+type Material = {
+  id: string;
+  name: string;
+  unit: string;
+  cost_per_unit: number;
+  material_roles: string[];
 };
 
 type ExistingOrder = {
@@ -35,7 +41,7 @@ type ExistingOrder = {
   status: string;
   price: number;
   target_completion_date: string | null;
-  tracking_token: string;
+  tracking_token: string | null;
   created_at: string;
 };
 
@@ -51,74 +57,218 @@ export default function OrderForm({
   // ---- ALL STATE + FUNCTIONS LIVE HERE, INSIDE THE COMPONENT ----
 
   const [orderNumber, setOrderNumber] = useState(
-    initialOrder?.order_number ?? ""
-  );
+  initialOrder?.order_number ?? ""
+);
 
-  const [customerName, setCustomerName] = useState(
-    initialOrder?.customer_name ?? ""
-  );
+const [customerName, setCustomerName] = useState(
+  initialOrder?.customer_name ?? ""
+);
 
-  const [email, setEmail] = useState(
-    initialOrder?.email ?? ""
-  );
+const [email, setEmail] = useState(
+  initialOrder?.email ?? ""
+);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materialsLoading, setMaterialsLoading] = useState(true);
+  const [requiredRoles, setRequiredRoles] = useState<string[]>([]);
+  const [bomLoading, setBomLoading] = useState(true);
 
-  const [product, setProduct] = useState<ProductName>(
-    initialOrder?.product ?? "Small Sling"
-  );
+ const [product, setProduct] = useState<ProductName>(
+  initialOrder?.product ?? "Small Sling"
+);
 
-  const [outerFabric, setOuterFabric] = useState(
-    initialOrder?.outer_fabric ?? "Army Green"
-  );
+const [outerFabric, setOuterFabric] = useState(
+  initialOrder?.outer_fabric ?? "Army Green"
+);
 
-  const [innerFabric, setInnerFabric] = useState(
-    initialOrder?.inner_fabric ?? "Orange"
-  );
+const [innerFabric, setInnerFabric] = useState(
+  initialOrder?.inner_fabric ?? "Orange"
+);
 
-  const [strapSize, setStrapSize] = useState(
-    initialOrder?.strap_size ?? "1 inch"
-  );
+const [strapColor, setStrapColor] = useState(
+  initialOrder?.strap_color ?? "Army Green"
+);
 
-  const [strapColor, setStrapColor] = useState(
-    initialOrder?.strap_color ?? "Army Green"
-  );
+const [mountingType, setMountingType] = useState(
+  initialOrder?.mounting_type ?? "Sling Hook"
+);
 
-  const [mountingType, setMountingType] = useState(
-    initialOrder?.mounting_type ?? "Sling Hook"
-  );
+const [price, setPrice] = useState<number>(
+  initialOrder?.price ?? 0
+);
 
-  const [price, setPrice] = useState<number>(
-    initialOrder?.price ?? 0
-  );
-
-  const [targetCompletionDate, setTargetCompletionDate] = useState(
+const [targetCompletionDate, setTargetCompletionDate] =
+  useState(
     initialOrder?.target_completion_date ?? ""
   );
+
+const [trackingToken, setTrackingToken] = useState(
+  initialOrder?.tracking_token ?? ""
+);
 
   const selectedProduct = products[product];
   const [isConfirmed, setIsConfirmed] = useState(false);
 
-  const [trackingToken, setTrackingToken] = useState(
-  initialOrder?.tracking_token ?? ""
-);
 
-  // Auto-reset defaults when switching products
+
   useEffect(() => {
-    // When editing an existing order, preserve its saved configuration
-    // when the form first loads.
-    if (initialOrder && product === initialOrder.product) {
+    async function fetchMaterials() {
+      setMaterialsLoading(true);
+
+      const { data, error } = await supabase
+        .from("materials")
+        .select(
+          "id, name, unit, cost_per_unit, material_roles"
+        )
+        .order("name");
+
+      if (error) {
+        console.error(
+          "Failed to load order materials:",
+          error.message
+        );
+        setMaterials([]);
+      } else {
+        setMaterials(
+          (data as Material[]) || []
+        );
+      }
+
+      setMaterialsLoading(false);
+    }
+
+    fetchMaterials();
+  }, []);
+
+  const outerFabricMaterials =
+    materials.filter((material) =>
+      material.material_roles?.includes(
+        "outer_fabric"
+      )
+    );
+
+  const innerFabricMaterials =
+    materials.filter((material) =>
+      material.material_roles?.includes(
+        "inner_fabric"
+      )
+    );
+
+  const strapMaterials =
+    materials.filter((material) =>
+      material.material_roles?.includes(
+        "strap"
+      )
+    );
+
+  const hardwareMaterials =
+    materials.filter((material) =>
+      material.material_roles?.includes(
+        "hardware"
+      )
+    );
+
+  const requiresRole = (role: string) =>
+    requiredRoles.includes(role);
+
+  useEffect(() => {
+    async function fetchRequiredRoles() {
+      setBomLoading(true);
+
+      const { data: bagType, error: bagTypeError } =
+        await supabase
+          .from("bag_types")
+          .select("id")
+          .eq("name", product)
+          .maybeSingle();
+
+      if (bagTypeError || !bagType) {
+        console.error(
+          "Could not find bag type for product:",
+          product,
+          bagTypeError?.message
+        );
+        setRequiredRoles([]);
+        setBomLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("bag_type_materials")
+        .select("material_role")
+        .eq("bag_type_id", bagType.id);
+
+      if (error) {
+        console.error(
+          "Failed to load product material roles:",
+          error.message
+        );
+        setRequiredRoles([]);
+      } else {
+        const roles = Array.from(
+          new Set(
+            (data || [])
+              .map((row) => row.material_role)
+              .filter(
+                (role): role is string =>
+                  Boolean(role)
+              )
+          )
+        );
+
+        setRequiredRoles(roles);
+      }
+
+      setBomLoading(false);
+    }
+
+    fetchRequiredRoles();
+  }, [product]);
+
+  // Auto-reset material defaults when switching products.
+  // Product Costs / BOM decides which roles are required.
+  // Materials supplies the exact physical item for each role.
+  useEffect(() => {
+    if (
+      initialOrder &&
+      product === initialOrder.product
+    ) {
       return;
     }
 
-    // When the user changes the product, reset to that product's defaults.
-    setOuterFabric(selectedProduct.outerFabric[0] || "");
-    setInnerFabric(selectedProduct.innerFabric[0] || "");
-    setStrapSize(selectedProduct.strapSize[0] || "");
-    setStrapColor(selectedProduct.strapColor[0] || "");
-    setMountingType(selectedProduct.mountingType[0] || "");
+    setOuterFabric(
+      requiresRole("outer_fabric")
+        ? outerFabricMaterials[0]?.name || ""
+        : ""
+    );
+
+    setInnerFabric(
+      requiresRole("inner_fabric")
+        ? innerFabricMaterials[0]?.name || ""
+        : ""
+    );
+
+    setStrapColor(
+      requiresRole("strap")
+        ? strapMaterials[0]?.name || ""
+        : ""
+    );
+
+    setMountingType(
+      requiresRole("hardware")
+        ? hardwareMaterials[0]?.name || ""
+        : ""
+    );
+
     setPrice(selectedProduct.basePrice);
-  }, [product, initialOrder, selectedProduct]);
+  }, [
+    product,
+    initialOrder,
+    selectedProduct,
+    materials,
+    requiredRoles,
+  ]);
 
   async function generateOrderImage(currentOrderNumber: string) {
     const element = document.getElementById("order-preview");
@@ -127,13 +277,11 @@ export default function OrderForm({
 
     try {
       const dataUrl = await toPng(element, {
-        pixelRatio: 3,
+        pixelRatio: 3, // High DPI for crisp text inside the exported image
       });
 
       const link = document.createElement("a");
-      const fileName = `${currentOrderNumber}-${toCamelCaseName(
-        customerName
-      )}.png`;
+      const fileName = `${currentOrderNumber}-${toCamelCaseName(customerName)}.png`;
 
       link.download = fileName;
       link.href = dataUrl;
@@ -143,221 +291,220 @@ export default function OrderForm({
     }
   }
 
-  async function submitOrder() {
-    if (!customerName || !email) {
-      alert("Please fill in customer name and email.");
-      return;
-    }
-
-    if (!targetCompletionDate) {
-      alert("Please set a target completion date.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-  // ============================================================
-  // CREATE MODE
-  // ============================================================
-
-  if (mode === "create") {
-    const newOrderNumber = await generateOrderNumber();
-    const newTrackingToken = uuidv4();
-
-    setOrderNumber(newOrderNumber);
-    setTrackingToken(newTrackingToken);
-
-    // CALCULATE COSTS
-    const { data: bagType } = await supabase
-      .from("bag_types")
-      .select("id")
-      .eq("name", product)
-      .single();
-
-    let materialCost = 0;
-    if (bagType) {
-      const { data: bagMaterials } = await supabase
-        .from("bag_type_materials")
-        .select("quantity_needed, materials(cost_per_unit)")
-        .eq("bag_type_id", bagType.id);
-
-      if (bagMaterials && bagMaterials.length > 0) {
-        materialCost = bagMaterials.reduce((sum: number, item: any) => {
-          return sum + item.quantity_needed * item.materials.cost_per_unit;
-        }, 0);
-      }
-    }
-
-    const laborCosts: { [key: string]: number } = {
-      "Pouch": 200,
-      "Small Sling": 250,
-      "Big Sling": 300,
-    };
-    const laborCost = laborCosts[product] || 0;
-    const totalProductionCost = materialCost + laborCost;
-    const profit = price - totalProductionCost;
-    const profitMargin = (profit / price) * 100;
-
-    const { error } = await supabase.from("orders").insert([
-      {
-        order_number: newOrderNumber,
-        bag_type_id: bagType?.id,
-        customer_name: customerName,
-        email,
-        product,
-        outer_fabric: outerFabric,
-        inner_fabric: innerFabric,
-        strap_size:
-          selectedProduct.strapSize.length > 0
-            ? strapSize
-            : null,
-        strap_color:
-          selectedProduct.strapColor.length > 0
-            ? strapColor
-            : null,
-        mounting_type:
-          selectedProduct.mountingType.length > 0
-            ? mountingType
-            : null,
-        price,
-        target_completion_date: targetCompletionDate,
-        tracking_token: newTrackingToken,
-        material_cost: Math.round(materialCost * 100) / 100,
-        labor_cost: laborCost,
-        total_production_cost: Math.round(totalProductionCost * 100) / 100,
-        profit: Math.round(profit * 100) / 100,
-        profit_margin: Math.round(profitMargin * 100) / 100,
-      },
-    ]);
-
-    if (error) {
-      console.error("Order save failed:", error.message);
-      alert(`Could not save order: ${error.message}`);
-      return;
-    }
-
-    await generateOrderImage(newOrderNumber);
-
-    setIsConfirmed(true);
-
+async function submitOrder() {
+  if (!customerName || !email) {
+    alert("Please fill in customer name and email.");
     return;
   }
 
-      // ============================================================
-      // EDIT MODE
-      // ============================================================
+  if (
+    requiresRole("outer_fabric") &&
+    !outerFabric
+  ) {
+    alert("Please select an outer fabric.");
+    return;
+  }
 
-      if (mode === "edit" && initialOrder) {
-        const { error } = await supabase
-          .from("orders")
-          .update({
+  if (
+    requiresRole("inner_fabric") &&
+    !innerFabric
+  ) {
+    alert("Please select an inner fabric.");
+    return;
+  }
+
+  if (
+    requiresRole("strap") &&
+    !strapColor
+  ) {
+    alert("Please select a strap material.");
+    return;
+  }
+
+  if (
+    requiresRole("hardware") &&
+    !mountingType
+  ) {
+    alert("Please select hardware.");
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    // CREATE MODE
+   
+
+    if (mode === "create") {
+      const newOrderNumber = await generateOrderNumber();
+
+      setOrderNumber(newOrderNumber);
+
+      const {
+        data: createdOrder,
+        error,
+      } = await supabase
+        .from("orders")
+        .insert([
+          {
+            order_number: newOrderNumber,
             customer_name: customerName,
             email,
             product,
             outer_fabric: outerFabric,
             inner_fabric: innerFabric,
-            strap_size:
-              selectedProduct.strapSize.length > 0
-                ? strapSize
-                : null,
+
+            // Legacy DB columns are kept for compatibility.
+            // Strap identity now lives in the selected Material name.
+            strap_size: null,
             strap_color:
-              selectedProduct.strapColor.length > 0
+              requiresRole("strap")
                 ? strapColor
                 : null,
             mounting_type:
-              selectedProduct.mountingType.length > 0
+              requiresRole("hardware")
                 ? mountingType
                 : null,
+
+            target_completion_date:
+              targetCompletionDate || null,
             price,
-            target_completion_date: targetCompletionDate,
-          })
-          .eq("id", initialOrder.id);
+          },
+        ])
+        .select("tracking_token")
+        .single();
 
-        if (error) {
-          console.error("Order update failed:", error.message);
-          alert(`Could not update order: ${error.message}`);
-          return;
-        }
-
-        // IMPORTANT:
-        // Editing NEVER generates a new order number.
-        await generateOrderImage(initialOrder.order_number);
-
-        window.location.href = `/orders/${initialOrder.order_number}`;
-
+      if (error) {
+        console.error("Order save failed:", error.message);
+        alert(`Could not save order: ${error.message}`);
         return;
       }
 
-      console.error("Invalid OrderForm mode or missing initial order.");
-    } catch (error) {
-      console.error("Unexpected order submission error:", error);
+      const newTrackingToken =
+        createdOrder?.tracking_token ?? "";
 
-      alert("Something went wrong while saving the order.");
-    } finally {
-      setIsSubmitting(false);
+      setTrackingToken(newTrackingToken);
+
+      // Allow React to render the order number + QR before image export.
+      await new Promise((resolve) =>
+        setTimeout(resolve, 100)
+      );
+
+      await generateOrderImage(newOrderNumber);
+
+      setIsConfirmed(true);
+
+      return;
     }
+
+    // ============================================================
+    // EDIT MODE
+    // ============================================================
+
+    if (mode === "edit" && initialOrder) {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          customer_name: customerName,
+          email,
+          product,
+          outer_fabric: outerFabric,
+          inner_fabric: innerFabric,
+          // Legacy DB columns are kept for compatibility.
+          // Strap size/type now lives in the selected Material name.
+          strap_size: null,
+          strap_color:
+            requiresRole("strap")
+              ? strapColor
+              : null,
+          mounting_type:
+            requiresRole("hardware")
+              ? mountingType
+              : null,
+          target_completion_date:
+            targetCompletionDate || null,
+          price,
+        })
+        .eq("id", initialOrder.id);
+
+      if (error) {
+        console.error("Order update failed:", error.message);
+        alert(`Could not update order: ${error.message}`);
+        return;
+      }
+
+      // IMPORTANT:
+      // Editing NEVER generates a new order number.
+      await generateOrderImage(initialOrder.order_number);
+
+      window.location.href = `/orders/${initialOrder.order_number}`;
+
+      return;
+    }
+
+    console.error("Invalid OrderForm mode or missing initial order.");
+
+  } catch (error) {
+    console.error("Unexpected order submission error:", error);
+
+    alert("Something went wrong while saving the order.");
+  } finally {
+    setIsSubmitting(false);
   }
+}
 
-  function startNewOrder() {
-    setCustomerName("");
-    setEmail("");
-    setProduct("Small Sling");
-    setOrderNumber("");
-    setTrackingToken("");
-    setOuterFabric("");
-    setInnerFabric("");
-    setStrapSize("");
-    setStrapColor("");
-    setMountingType("");
-    setPrice(products["Small Sling"].basePrice);
 
-    setTargetCompletionDate("");
 
-    setIsConfirmed(false);
-  }
+function startNewOrder() {
+  setCustomerName("");
+  setEmail("");
+  setProduct("Small Sling");
+  setOrderNumber("");
+
+  setOuterFabric("");
+  setInnerFabric("");
+  setStrapColor("");
+  setMountingType("");
+  setTargetCompletionDate("");
+  setTrackingToken("");
+  setPrice(products["Small Sling"].basePrice);
+
+  setIsConfirmed(false);
+}
+
+
+
 
   // ---- BELOW THIS POINT: JSX ONLY ----
 
+  
+
   return isConfirmed ? (
-    // ---- CONFIRMATION VIEW ----
+    // ---- CONFIRMATION VIEW (shown after a successful submit) ----
     <div className="mx-auto max-w-md rounded-xl border bg-white p-8 text-center shadow-sm">
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
         <span className="text-2xl">✓</span>
       </div>
-
-      <h2 className="text-xl font-semibold text-zinc-900">
-        Order Confirmed!
-      </h2>
-
-      <p className="mt-2 text-sm text-zinc-900">
-        Order{" "}
-        <span className="font-mono font-medium">
-          {orderNumber}
-        </span>{" "}
-        has been saved and the image was downloaded.
+      <h2 className="text-xl font-semibold">Order Confirmed!</h2>
+      <p className="mt-2 text-sm text-zinc-500">
+        Order <span className="font-mono font-medium">{orderNumber}</span> has
+        been saved and the image was downloaded.
       </p>
-
       <button
         type="button"
         onClick={startNewOrder}
-        className="mt-6 w-full rounded-lg bg-black px-5 py-3 font-medium text-white transition-colors hover:bg-zinc-800"
+        className="mt-6 w-full rounded-lg bg-black px-5 py-3 font-medium text-white hover:bg-zinc-800 transition-colors"
       >
         Start New Order
       </button>
     </div>
   ) : (
-    // ---- FORM VIEW ----
+    // ---- FORM VIEW (default) ----
     <div className="grid gap-8 lg:grid-cols-2">
-
       {/* LEFT SIDE — ORDER FORM */}
       <div className="rounded-xl border bg-white p-8 shadow-sm">
-
         <div>
-          <h2 className="text-xl font-semibold text-zinc-800">
-            Configure Your Order
-          </h2>
-
+          <h2 className="text-xl font-semibold text-zinc-800">Configure Your Order</h2>
           <p className="mt-1 text-sm text-zinc-800">
             Select the product and customize its options.
           </p>
@@ -365,10 +512,7 @@ export default function OrderForm({
 
         {/* CUSTOMER NAME */}
         <div className="mt-8">
-          <label className="text-sm font-medium text-zinc-800">
-            Customer Name
-          </label>
-
+          <label className="text-sm font-medium text-zinc-800">Customer Name</label>
           <input
             type="text"
             value={customerName}
@@ -380,10 +524,7 @@ export default function OrderForm({
 
         {/* EMAIL */}
         <div className="mt-6">
-          <label className="text-sm font-medium text-zinc-800">
-            Email Address
-          </label>
-
+          <label className="text-sm font-medium text-zinc-800" >Email Address</label>
           <input
             type="email"
             value={email}
@@ -393,37 +534,13 @@ export default function OrderForm({
           />
         </div>
 
-        {/* TARGET COMPLETION */}
-        <div className="mt-8">
-          <label className="text-sm font-medium text-zinc-800">
-            Target Completion
-          </label>
-
-          <p className="mt-1 text-xs text-zinc-500">
-            Set the production date you are targeting for this order.
-          </p>
-
-          <input
-            type="date"
-            value={targetCompletionDate}
-            onChange={(e) => setTargetCompletionDate(e.target.value)}
-            required
-            className="mt-3 w-full rounded-lg border px-4 py-3 text-zinc-800"
-          />
-        </div>
-
         {/* PRODUCT */}
         <div className="mt-8">
-          <label className="text-sm font-medium text-zinc-800">
-            Product
-          </label>
-
+          <label className="text-sm font-medium text-zinc-800">Product</label>
           <select
             value={product}
-            onChange={(e) =>
-              setProduct(e.target.value as ProductName)
-            }
-            className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800"
+            onChange={(e) => setProduct(e.target.value as ProductName)}
+            className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800" 
           >
             {Object.keys(products).map((productName) => (
               <option key={productName} value={productName}>
@@ -433,7 +550,21 @@ export default function OrderForm({
           </select>
         </div>
 
+        {bomLoading && (
+          <p className="mt-6 text-sm text-zinc-500">
+            Loading product material requirements...
+          </p>
+        )}
+
+        {!bomLoading && requiredRoles.length === 0 && (
+          <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            No material roles are configured for this product yet.
+            Add its recipe in Product Costs first.
+          </div>
+        )}
+
         {/* OUTER FABRIC */}
+        {requiresRole("outer_fabric") && (
         <div className="mt-6">
           <label className="text-sm font-medium text-zinc-800">
             Outer Fabric
@@ -441,18 +572,60 @@ export default function OrderForm({
 
           <select
             value={outerFabric}
-            onChange={(e) => setOuterFabric(e.target.value)}
-            className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800"
+            disabled={
+              materialsLoading ||
+              outerFabricMaterials.length === 0
+            }
+            onChange={(e) =>
+              setOuterFabric(e.target.value)
+            }
+            className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400"
           >
-            {selectedProduct.outerFabric.map((fabric) => (
-              <option key={fabric} value={fabric}>
-                {fabric}
+            {materialsLoading ? (
+              <option value="">
+                Loading materials...
               </option>
-            ))}
+            ) : outerFabricMaterials.length === 0 ? (
+              <option value="">
+                No outer fabrics configured
+              </option>
+            ) : (
+              <>
+                {initialOrder?.outer_fabric &&
+                  !outerFabricMaterials.some(
+                    (material) =>
+                      material.name ===
+                      initialOrder.outer_fabric
+                  ) && (
+                    <option
+                      value={
+                        initialOrder.outer_fabric
+                      }
+                    >
+                      {initialOrder.outer_fabric}
+                      {" (saved)"}
+                    </option>
+                  )}
+
+                {outerFabricMaterials.map(
+                  (material) => (
+                    <option
+                      key={material.id}
+                      value={material.name}
+                    >
+                      {material.name}
+                    </option>
+                  )
+                )}
+              </>
+            )}
           </select>
         </div>
 
+        )}
+
         {/* INNER FABRIC */}
+        {requiresRole("inner_fabric") && (
         <div className="mt-6">
           <label className="text-sm font-medium text-zinc-800">
             Inner Fabric
@@ -460,106 +633,213 @@ export default function OrderForm({
 
           <select
             value={innerFabric}
-            onChange={(e) => setInnerFabric(e.target.value)}
-            className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800"
+            disabled={
+              materialsLoading ||
+              innerFabricMaterials.length === 0
+            }
+            onChange={(e) =>
+              setInnerFabric(e.target.value)
+            }
+            className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400"
           >
-            {selectedProduct.innerFabric.map((fabric) => (
-              <option key={fabric} value={fabric}>
-                {fabric}
+            {materialsLoading ? (
+              <option value="">
+                Loading materials...
               </option>
-            ))}
+            ) : innerFabricMaterials.length === 0 ? (
+              <option value="">
+                No inner fabrics configured
+              </option>
+            ) : (
+              <>
+                {initialOrder?.inner_fabric &&
+                  !innerFabricMaterials.some(
+                    (material) =>
+                      material.name ===
+                      initialOrder.inner_fabric
+                  ) && (
+                    <option
+                      value={
+                        initialOrder.inner_fabric
+                      }
+                    >
+                      {initialOrder.inner_fabric}
+                      {" (saved)"}
+                    </option>
+                  )}
+
+                {innerFabricMaterials.map(
+                  (material) => (
+                    <option
+                      key={material.id}
+                      value={material.name}
+                    >
+                      {material.name}
+                    </option>
+                  )
+                )}
+              </>
+            )}
           </select>
         </div>
 
-        {/* STRAP SIZE */}
-        {selectedProduct.strapSize.length > 0 && (
-          <div className="mt-6">
-            <label className="text-sm font-medium text-zinc-800">
-              Strap Size
-            </label>
-
-            <select
-              value={strapSize}
-              onChange={(e) => setStrapSize(e.target.value)}
-              className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800"
-            >
-              {selectedProduct.strapSize.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
         )}
 
-        {/* STRAP COLOR */}
-        {selectedProduct.strapColor.length > 0 && (
+        {/* STRAP MATERIAL */}
+        {requiresRole("strap") && (
           <div className="mt-6">
             <label className="text-sm font-medium text-zinc-800">
-              Strap Color
+              Strap Material
             </label>
 
             <select
               value={strapColor}
-              onChange={(e) => setStrapColor(e.target.value)}
-              className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800"
+              disabled={
+                materialsLoading ||
+                strapMaterials.length === 0
+              }
+              onChange={(e) =>
+                setStrapColor(e.target.value)
+              }
+              className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400"
             >
-              {selectedProduct.strapColor.map((color) => (
-                <option key={color} value={color}>
-                  {color}
+              {materialsLoading ? (
+                <option value="">
+                  Loading materials...
                 </option>
-              ))}
+              ) : strapMaterials.length === 0 ? (
+                <option value="">
+                  No strap materials configured
+                </option>
+              ) : (
+                <>
+                  {initialOrder?.strap_color &&
+                    !strapMaterials.some(
+                      (material) =>
+                        material.name ===
+                        initialOrder.strap_color
+                    ) && (
+                      <option
+                        value={
+                          initialOrder.strap_color
+                        }
+                      >
+                        {initialOrder.strap_color}
+                        {" (saved)"}
+                      </option>
+                    )}
+
+                  {strapMaterials.map(
+                    (material) => (
+                      <option
+                        key={material.id}
+                        value={material.name}
+                      >
+                        {material.name}
+                      </option>
+                    )
+                  )}
+                </>
+              )}
             </select>
           </div>
         )}
 
-        {/* MOUNTING TYPE */}
-        {selectedProduct.mountingType.length > 0 && (
+        {/* HARDWARE */}
+        {requiresRole("hardware") && (
           <div className="mt-6">
             <label className="text-sm font-medium text-zinc-800">
-              Strap Mounting
+              Hardware
             </label>
 
             <select
               value={mountingType}
-              onChange={(e) => setMountingType(e.target.value)}
-              className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800"
+              disabled={
+                materialsLoading ||
+                hardwareMaterials.length === 0
+              }
+              onChange={(e) =>
+                setMountingType(e.target.value)
+              }
+              className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400"
             >
-              {selectedProduct.mountingType.map((mount) => (
-                <option key={mount} value={mount}>
-                  {mount}
+              {materialsLoading ? (
+                <option value="">
+                  Loading materials...
                 </option>
-              ))}
+              ) : hardwareMaterials.length === 0 ? (
+                <option value="">
+                  No hardware configured
+                </option>
+              ) : (
+                <>
+                  {initialOrder?.mounting_type &&
+                    !hardwareMaterials.some(
+                      (material) =>
+                        material.name ===
+                        initialOrder.mounting_type
+                    ) && (
+                      <option
+                        value={
+                          initialOrder.mounting_type
+                        }
+                      >
+                        {initialOrder.mounting_type}
+                        {" (saved)"}
+                      </option>
+                    )}
+
+                  {hardwareMaterials.map(
+                    (material) => (
+                      <option
+                        key={material.id}
+                        value={material.name}
+                      >
+                        {material.name}
+                      </option>
+                    )
+                  )}
+                </>
+              )}
             </select>
           </div>
         )}
 
-        {/* PRICE */}
+        {/* TARGET COMPLETION */}
         <div className="mt-6">
           <label className="text-sm font-medium text-zinc-800">
-            Price (₱)
+            Target Completion
           </label>
 
-          <div className="mt-2 w-full rounded-lg border bg-zinc-50 px-4 py-3 text-zinc-700">
-            ₱{price.toFixed(2)}
-          </div>
+          <input
+            type="date"
+            value={targetCompletionDate}
+            onChange={(e) =>
+              setTargetCompletionDate(e.target.value)
+            }
+            className="mt-2 w-full rounded-lg border px-4 py-3 text-zinc-800"
+          />
         </div>
 
+        {/* PRICE */}
+        <div className="mt-6">
+          <label className="text-sm font-medium text-zinc-800">Price (₱)</label>
+          <div className="mt-2 w-full rounded-lg border bg-zinc-50 px-4 py-3 text-zinc-700">
+            ₱{price.toFixed(2)}
+            </div>
+          
+        </div>
       </div>
 
       {/* RIGHT SIDE — ORDER PREVIEW */}
       <div className="rounded-xl border bg-zinc-100 p-8">
-
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-zinc-800">
-            Order Preview
-          </h2>
-
+          <h2 className="text-xl font-bold text-zinc-800">Order Preview</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            {mode === "edit"
-              ? "Review your changes before saving."
-              : "Photo will be generated after order confirmation."}
-          </p>
+  {mode === "edit"
+    ? "Review your changes before saving."
+    : "Photo will be generated after order confirmation."}
+</p>
         </div>
 
         <OrderPreview
@@ -568,42 +848,38 @@ export default function OrderForm({
           product={product}
           outerFabric={outerFabric}
           innerFabric={innerFabric}
-          strapSize={
-            selectedProduct.strapSize.length > 0
-              ? strapSize
-              : ""
-          }
-          strapColor={
-            selectedProduct.strapColor.length > 0
+          strapMaterial={
+            requiresRole("strap")
               ? strapColor
               : ""
           }
-          mountingType={
-            selectedProduct.mountingType.length > 0
+          hardware={
+            requiresRole("hardware")
               ? mountingType
               : ""
           }
+          targetCompletionDate={
+            targetCompletionDate
+          }
+          trackingToken={
+            trackingToken || undefined
+          }
           price={price}
-          targetCompletionDate={targetCompletionDate}
-          trackingToken={trackingToken}
         />
 
         <button
           type="button"
           onClick={submitOrder}
           disabled={isSubmitting}
-          className="mt-6 w-full rounded-lg bg-black px-5 py-3 font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+          className="mt-6 w-full rounded-lg bg-black px-5 py-3 font-medium text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
         >
           {isSubmitting
-            ? "Saving..."
-            : mode === "edit"
-            ? "Save Changes"
-            : "Confirm Order"}
+  ? "Saving..."
+  : mode === "edit"
+  ? "Save Changes"
+  : "Confirm Order"}
         </button>
-
       </div>
-
     </div>
   );
 }
-

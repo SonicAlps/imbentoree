@@ -399,12 +399,17 @@ export default function MaterialsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 rounded-2xl bg-zinc-50 p-6 text-zinc-900">
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-zinc-900">
           Materials
         </h1>
+        <p className="mt-2 text-sm text-zinc-600">
+          Create each physical stock item as its own material. Include identifying
+          details such as size, color, or type in the name (for example:
+          Black Nylon Webbing 1 inch or Black Swivel Hook 1 inch).
+        </p>
 
         <p className="mt-2 text-zinc-600">
           Manage raw materials, purchase
@@ -414,7 +419,7 @@ export default function MaterialsPage() {
 
       {/* ADD / EDIT FORM */}
       {isAdding && (
-        <div className="rounded-lg border bg-zinc-50 p-6">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-zinc-900">
             {editingId
               ? "Edit Material"
@@ -434,7 +439,7 @@ export default function MaterialsPage() {
                 onChange={(e) =>
                   setName(e.target.value)
                 }
-                className="mt-1 w-full rounded border px-3 py-2"
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                 placeholder="e.g., 1 inch Nylon Webbing"
               />
             </div>
@@ -456,7 +461,7 @@ export default function MaterialsPage() {
                   setPurchaseUnitAmount(0);
                   setPurchasePrice(0);
                 }}
-                className="mt-1 w-full rounded border px-3 py-2"
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
               >
                 {UNIT_OPTIONS.map(
                   (option) => (
@@ -476,7 +481,7 @@ export default function MaterialsPage() {
                 ================================== */}
             {unit === "m²" ? (
               <div className="sm:col-span-2">
-                <div className="rounded-lg border bg-white p-5">
+                <div className="rounded-xl border border-zinc-200 bg-white p-5">
                   <h3 className="font-semibold text-zinc-900">
                     Fabric Purchase
                   </h3>
@@ -509,7 +514,7 @@ export default function MaterialsPage() {
                             ) || 0
                           )
                         }
-                        className="mt-1 w-full rounded border px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="1"
                       />
                     </div>
@@ -534,7 +539,7 @@ export default function MaterialsPage() {
                             ) || 0
                           )
                         }
-                        className="mt-1 w-full rounded border px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="1.5"
                       />
                     </div>
@@ -559,7 +564,7 @@ export default function MaterialsPage() {
                             ) || 0
                           )
                         }
-                        className="mt-1 w-full rounded border px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="400"
                       />
                     </div>
@@ -635,7 +640,7 @@ export default function MaterialsPage() {
                  OTHER MATERIALS
                  ================================== */
               <div className="sm:col-span-2">
-                <div className="rounded-lg border bg-white p-5">
+                <div className="rounded-xl border border-zinc-200 bg-white p-5">
                   <h3 className="font-semibold text-zinc-900">
                     Purchase Information
                   </h3>
@@ -673,7 +678,7 @@ export default function MaterialsPage() {
                             ) || 0
                           )
                         }
-                        className="mt-1 w-full rounded border px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="1"
                       />
 
@@ -709,7 +714,7 @@ export default function MaterialsPage() {
                             ) || 0
                           )
                         }
-                        className="mt-1 w-full rounded border px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="3"
                       />
 
@@ -739,7 +744,7 @@ export default function MaterialsPage() {
                             ) || 0
                           )
                         }
-                        className="mt-1 w-full rounded border px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="300"
                       />
                     </div>
@@ -844,7 +849,7 @@ export default function MaterialsPage() {
                     e.target.value
                   )
                 }
-                className="mt-1 w-full rounded border px-3 py-2"
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                 placeholder="Optional"
               />
             </div>
@@ -859,7 +864,7 @@ export default function MaterialsPage() {
           {/* MATERIAL ROLES */}
 <div className="sm:col-span-2">
 
-  <div className="rounded-lg border bg-white p-5">
+  <div className="rounded-xl border border-zinc-200 bg-white p-5">
     <h3 className="font-semibold text-zinc-900">
       Used As
     </h3>
@@ -873,7 +878,7 @@ export default function MaterialsPage() {
       {MATERIAL_ROLE_OPTIONS.map((role) => (
         <label
           key={role.value}
-          className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-zinc-50"
+          className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:bg-zinc-50"
         >
           <input
             type="checkbox"
@@ -911,7 +916,7 @@ export default function MaterialsPage() {
           <div className="mt-5 flex gap-2">
             <button
               onClick={handleSave}
-              className="rounded bg-black px-4 py-2 text-white hover:bg-zinc-800"
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-white shadow-sm hover:bg-zinc-800"
             >
               {editingId
                 ? "Update"
@@ -921,7 +926,7 @@ export default function MaterialsPage() {
 
             <button
               onClick={resetForm}
-              className="rounded border px-4 py-2 text-zinc-700 hover:bg-zinc-100"
+              className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-700 hover:bg-zinc-100"
             >
               Cancel
             </button>
@@ -935,7 +940,7 @@ export default function MaterialsPage() {
           onClick={() =>
             setIsAdding(true)
           }
-          className="rounded bg-black px-4 py-2 text-white hover:bg-zinc-800"
+          className="rounded-lg bg-zinc-900 px-4 py-2 text-white shadow-sm hover:bg-zinc-800"
         >
           + Add Material
         </button>
@@ -952,9 +957,9 @@ export default function MaterialsPage() {
           started.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full">
-            <thead className="bg-zinc-50">
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <table className="w-full bg-white">
+            <thead className="bg-zinc-100/80">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
                   Name
@@ -991,7 +996,7 @@ export default function MaterialsPage() {
                 (material) => (
                   <tr
   key={material.id}
-  className="border-t"
+  className="border-t border-zinc-200 bg-white hover:bg-zinc-50/70"
 >
   <td className="px-4 py-3 text-sm text-zinc-900">
     {material.name}

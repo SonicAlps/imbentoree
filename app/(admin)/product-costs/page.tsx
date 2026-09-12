@@ -547,7 +547,7 @@ export default function ProductCostsPage() {
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 rounded-2xl bg-zinc-50 p-6 text-zinc-900">
       <div>
         <h1 className="text-3xl font-bold text-zinc-900">
           Product Costs
@@ -567,7 +567,7 @@ export default function ProductCostsPage() {
       ) : (
         <div className="grid gap-8 lg:grid-cols-3">
           {/* LEFT — BAG TYPES */}
-          <div className="rounded-lg border bg-white p-6">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold text-zinc-900">
               Bag Types
             </h2>
@@ -585,8 +585,8 @@ export default function ProductCostsPage() {
                     className={`w-full rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors ${
                       selectedBagType ===
                       bagType.id
-                        ? "bg-black text-white"
-                        : "border bg-white text-zinc-900 hover:bg-zinc-50"
+                        ? "bg-zinc-900 text-white shadow-sm"
+                        : "border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-100"
                     }`}
                   >
                     {bagType.name}
@@ -600,7 +600,7 @@ export default function ProductCostsPage() {
           {selectedBagType ? (
             <div className="space-y-6 lg:col-span-2">
               {/* ADD MATERIAL */}
-              <div className="rounded-lg border bg-white p-6">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-1 text-lg font-semibold text-zinc-900">
                   Add Material to{" "}
                   {selectedBagTypeName}
@@ -634,7 +634,7 @@ export default function ProductCostsPage() {
         },
       ]);
     }}
-    className="mt-1 w-full rounded border px-3 py-2"
+    className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
   >
     <option value="">
       Select role...
@@ -658,7 +658,7 @@ export default function ProductCostsPage() {
 {/* FABRIC CALCULATOR */}
                 {selectedRoleUnit ===
                   "m²" && (
-                  <div className="mt-5 rounded-lg border bg-zinc-50 p-4">
+                  <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                     <h3 className="font-semibold text-zinc-900">
                       Fabric Cut Calculator
                     </h3>
@@ -705,7 +705,7 @@ export default function ProductCostsPage() {
                                       0
                                   )
                                 }
-                                className="mt-1 w-full rounded border px-3 py-2"
+                                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                                 placeholder="24"
                               />
                             </div>
@@ -735,7 +735,7 @@ export default function ProductCostsPage() {
                                       0
                                   )
                                 }
-                                className="mt-1 w-full rounded border px-3 py-2"
+                                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                                 placeholder="18"
                               />
                             </div>
@@ -764,7 +764,7 @@ export default function ProductCostsPage() {
                                       1
                                   )
                                 }
-                                className="mt-1 w-full rounded border px-3 py-2"
+                                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                               />
                             </div>
 
@@ -792,7 +792,7 @@ export default function ProductCostsPage() {
                                       cut.id
                                     )
                                   }
-                                  className="rounded border px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                                 >
                                   ×
                                 </button>
@@ -807,7 +807,7 @@ export default function ProductCostsPage() {
                       onClick={
                         addFabricCut
                       }
-                      className="mt-4 rounded border px-3 py-2 text-sm text-zinc-700 hover:bg-white"
+                      className="mt-4 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
                     >
                       + Add Cut
                     </button>
@@ -863,7 +863,7 @@ export default function ProductCostsPage() {
                             ) || 0
                           )
                         }
-                        className="mt-1 w-full rounded border px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="1"
                         step="0.01"
                       />
@@ -875,7 +875,7 @@ export default function ProductCostsPage() {
                     onClick={
                       handleAddMaterial
                     }
-                    className="mt-5 w-full rounded bg-black px-4 py-2 text-white hover:bg-zinc-800"
+                    className="mt-5 w-full rounded-lg bg-zinc-900 px-4 py-2 text-white shadow-sm hover:bg-zinc-800"
                   >
                     Add Role to Recipe
                   </button>
@@ -883,7 +883,7 @@ export default function ProductCostsPage() {
               </div>
 
               {/* CURRENT RECIPE */}
-              <div className="rounded-lg border bg-white p-6">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-lg font-semibold text-zinc-900">
                   Recipe:{" "}
                   {selectedBagTypeName}
@@ -967,7 +967,7 @@ export default function ProductCostsPage() {
               </div>
 
               {/* COST BREAKDOWN */}
-              <div className="rounded-lg border bg-white p-6">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-lg font-semibold text-zinc-900">
                   Cost Breakdown
                 </h2>
@@ -1020,7 +1020,7 @@ export default function ProductCostsPage() {
                             })
                           )
                         }
-                        className="flex-1 rounded border px-3 py-2"
+                        className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                         placeholder="0.00"
                         step="0.01"
                       />
@@ -1030,7 +1030,7 @@ export default function ProductCostsPage() {
                         onClick={
                           handleUpdateLaborCost
                         }
-                        className="rounded bg-black px-4 py-2 text-white hover:bg-zinc-800"
+                        className="rounded-lg bg-zinc-900 px-4 py-2 text-white shadow-sm hover:bg-zinc-800"
                       >
                         Set
                       </button>
@@ -1059,7 +1059,7 @@ export default function ProductCostsPage() {
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border bg-zinc-50 p-6 text-center lg:col-span-2">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm text-center lg:col-span-2">
               <p className="text-zinc-600">
                 Select a bag type to configure
                 materials.
