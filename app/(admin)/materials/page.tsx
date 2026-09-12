@@ -17,6 +17,8 @@ type Material = {
   purchase_quantity: number | null;
   purchase_unit_amount: number | null;
 
+  material_roles: string[];
+
   created_at: string;
 };
 
@@ -79,6 +81,9 @@ export default function MaterialsPage() {
 
   const [purchasePrice, setPurchasePrice] =
     useState<number>(0);
+    
+  const [materialRoles, setMaterialRoles] =
+  useState<string[]>([]);
 
   const [editingId, setEditingId] =
     useState<string | null>(null);
@@ -114,6 +119,25 @@ export default function MaterialsPage() {
       ) || UNIT_OPTIONS[0]
     );
   }
+
+  const MATERIAL_ROLE_OPTIONS = [
+  {
+    value: "outer_fabric",
+    label: "Outer Fabric",
+  },
+  {
+    value: "inner_fabric",
+    label: "Inner Fabric",
+  },
+  {
+    value: "strap",
+    label: "Strap",
+  },
+  {
+    value: "hardware",
+    label: "Hardware",
+  },
+];
 
   /*
    * ==========================================
@@ -213,40 +237,42 @@ export default function MaterialsPage() {
     }
 
     const materialData = {
-      name: name.trim(),
-      unit,
-      cost_per_unit: finalCostPerUnit,
-      supplier:
-        supplier.trim() || null,
+  name: name.trim(),
+  unit,
+  cost_per_unit: finalCostPerUnit,
+  supplier:
+    supplier.trim() || null,
 
-      /*
-       * Fabric-specific fields
-       */
-      purchase_length_m:
-        unit === "m²"
-          ? purchaseLengthM
-          : null,
+  material_roles: materialRoles,
 
-      purchase_width_m:
-        unit === "m²"
-          ? purchaseWidthM
-          : null,
+  /*
+   * Fabric-specific fields
+   */
+  purchase_length_m:
+    unit === "m²"
+      ? purchaseLengthM
+      : null,
 
-      /*
-       * Generic purchase fields
-       */
-      purchase_quantity:
-        unit === "m²"
-          ? null
-          : purchaseQuantity,
+  purchase_width_m:
+    unit === "m²"
+      ? purchaseWidthM
+      : null,
 
-      purchase_unit_amount:
-        unit === "m²"
-          ? null
-          : purchaseUnitAmount,
+  /*
+   * Generic purchase fields
+   */
+  purchase_quantity:
+    unit === "m²"
+      ? null
+      : purchaseQuantity,
 
-      purchase_price: purchasePrice,
-    };
+  purchase_unit_amount:
+    unit === "m²"
+      ? null
+      : purchaseUnitAmount,
+
+  purchase_price: purchasePrice,
+};
 
     if (editingId) {
       const { error } = await supabase
@@ -323,6 +349,11 @@ export default function MaterialsPage() {
       material.supplier || ""
     );
 
+      setMaterialRoles(
+       material.material_roles || []
+    );
+
+
     setPurchaseLengthM(
       material.purchase_length_m || 0
     );
@@ -343,6 +374,7 @@ export default function MaterialsPage() {
       material.purchase_price || 0
     );
 
+  
     setEditingId(material.id);
     setIsAdding(true);
   }
@@ -351,6 +383,8 @@ export default function MaterialsPage() {
     setName("");
     setUnit("meter");
     setSupplier("");
+
+    setMaterialRoles([]);
 
     setPurchaseLengthM(0);
     setPurchaseWidthM(0);
@@ -814,7 +848,64 @@ export default function MaterialsPage() {
                 placeholder="Optional"
               />
             </div>
+
+
+
+            
           </div>
+
+        
+
+          {/* MATERIAL ROLES */}
+<div className="sm:col-span-2">
+
+  <div className="rounded-lg border bg-white p-5">
+    <h3 className="font-semibold text-zinc-900">
+      Used As
+    </h3>
+
+    <p className="mt-1 text-sm text-zinc-500">
+      Select where this material can be used in a bag.
+      A material can have more than one role.
+    </p>
+
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {MATERIAL_ROLE_OPTIONS.map((role) => (
+        <label
+          key={role.value}
+          className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-zinc-50"
+        >
+          <input
+            type="checkbox"
+            checked={materialRoles.includes(
+              role.value
+            )}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setMaterialRoles((current) => [
+                  ...current,
+                  role.value,
+                ]);
+              } else {
+                setMaterialRoles((current) =>
+                  current.filter(
+                    (value) =>
+                      value !== role.value
+                  )
+                );
+              }
+            }}
+            className="h-4 w-4"
+          />
+
+          <span className="text-sm font-medium text-zinc-800">
+            {role.label}
+          </span>
+        </label>
+      ))}
+    </div>
+  </div>
+</div>
 
           {/* ACTIONS */}
           <div className="mt-5 flex gap-2">
@@ -884,6 +975,10 @@ export default function MaterialsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
                   Supplier
                 </th>
+                
+                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
+                    Used As
+                </th>
 
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
                   Actions
@@ -895,116 +990,147 @@ export default function MaterialsPage() {
               {materials.map(
                 (material) => (
                   <tr
-                    key={material.id}
-                    className="border-t"
-                  >
-                    <td className="px-4 py-3 text-sm text-zinc-900">
-                      {material.name}
-                    </td>
+  key={material.id}
+  className="border-t"
+>
+  <td className="px-4 py-3 text-sm text-zinc-900">
+    {material.name}
+  </td>
 
-                    <td className="px-4 py-3 text-sm text-zinc-600">
-                      {
-                        getUnitInfo(
-                          material.unit
-                        ).label
-                      }
-                    </td>
+  <td className="px-4 py-3 text-sm text-zinc-600">
+    {
+      getUnitInfo(
+        material.unit
+      ).label
+    }
+  </td>
 
-                    <td className="px-4 py-3 text-sm text-zinc-900">
-                      ₱
-                      {material.cost_per_unit.toFixed(
-                        2
-                      )}{" "}
-                      /{" "}
-                      {
-                        getUnitInfo(
-                          material.unit
-                        ).shortLabel
-                      }
-                    </td>
+  <td className="px-4 py-3 text-sm text-zinc-900">
+    ₱
+    {material.cost_per_unit.toFixed(
+      2
+    )}{" "}
+    /{" "}
+    {
+      getUnitInfo(
+        material.unit
+      ).shortLabel
+    }
+  </td>
 
-                    <td className="px-4 py-3 text-sm text-zinc-600">
-                      {material.unit ===
-                        "m²" &&
-                      material.purchase_length_m &&
-                      material.purchase_width_m &&
-                      material.purchase_price ? (
-                        <>
-                          {
-                            material.purchase_length_m
-                          }
-                          m ×{" "}
-                          {
-                            material.purchase_width_m
-                          }
-                          m
-                          <br />
-                          ₱
-                          {material.purchase_price.toFixed(
-                            2
-                          )}
-                        </>
-                      ) : material.purchase_quantity &&
-                        material.purchase_unit_amount &&
-                        material.purchase_price ? (
-                        <>
-                          {
-                            material.purchase_quantity
-                          }{" "}
-                          purchase unit
-                          {material.purchase_quantity !==
-                          1
-                            ? "s"
-                            : ""}{" "}
-                          ×{" "}
-                          {
-                            material.purchase_unit_amount
-                          }{" "}
-                          {
-                            getUnitInfo(
-                              material.unit
-                            ).shortLabel
-                          }
-                          <br />
-                          ₱
-                          {material.purchase_price.toFixed(
-                            2
-                          )}
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
+  <td className="px-4 py-3 text-sm text-zinc-600">
+    {material.unit ===
+      "m²" &&
+    material.purchase_length_m &&
+    material.purchase_width_m &&
+    material.purchase_price ? (
+      <>
+        {
+          material.purchase_length_m
+        }
+        m ×{" "}
+        {
+          material.purchase_width_m
+        }
+        m
+        <br />
+        ₱
+        {material.purchase_price.toFixed(
+          2
+        )}
+      </>
+    ) : material.purchase_quantity &&
+      material.purchase_unit_amount &&
+      material.purchase_price ? (
+      <>
+        {
+          material.purchase_quantity
+        }{" "}
+        purchase unit
+        {material.purchase_quantity !==
+        1
+          ? "s"
+          : ""}{" "}
+        ×{" "}
+        {
+          material.purchase_unit_amount
+        }{" "}
+        {
+          getUnitInfo(
+            material.unit
+          ).shortLabel
+        }
+        <br />
+        ₱
+        {material.purchase_price.toFixed(
+          2
+        )}
+      </>
+    ) : (
+      "—"
+    )}
+  </td>
 
-                    <td className="px-4 py-3 text-sm text-zinc-600">
-                      {material.supplier ||
-                        "—"}
-                    </td>
+  <td className="px-4 py-3 text-sm text-zinc-600">
+    {material.supplier ||
+      "—"}
+  </td>
 
-                    <td className="px-4 py-3 text-sm">
-                      <button
-                        onClick={() =>
-                          handleEdit(
-                            material
-                          )
-                        }
-                        className="mr-2 text-blue-600 hover:underline"
-                      >
-                        Edit
-                      </button>
+  {/* NEW: USED AS */}
+  <td className="px-4 py-3 text-sm text-zinc-600">
+    {material.material_roles &&
+    material.material_roles.length > 0 ? (
+      <div className="flex flex-wrap gap-1">
+        {material.material_roles.map(
+          (role) => {
+            const roleInfo =
+              MATERIAL_ROLE_OPTIONS.find(
+                (option) =>
+                  option.value === role
+              );
 
-                      <button
-                        onClick={() =>
-                          handleDelete(
-                            material.id
-                          )
-                        }
-                        className="text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+            return (
+              <span
+                key={role}
+                className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700"
+              >
+                {roleInfo?.label ||
+                  role}
+              </span>
+            );
+          }
+        )}
+      </div>
+    ) : (
+      "—"
+    )}
+  </td>
+
+  {/* ACTIONS */}
+  <td className="px-4 py-3 text-sm">
+    <button
+      onClick={() =>
+        handleEdit(
+          material
+        )
+      }
+      className="mr-2 text-blue-600 hover:underline"
+    >
+      Edit
+    </button>
+
+    <button
+      onClick={() =>
+        handleDelete(
+          material.id
+        )
+      }
+      className="text-red-600 hover:underline"
+    >
+      Delete
+    </button>
+  </td>
+</tr>
                 )
               )}
             </tbody>

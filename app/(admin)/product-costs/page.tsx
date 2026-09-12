@@ -14,14 +14,15 @@ type Material = {
   name: string;
   unit: string;
   cost_per_unit: number;
+  material_roles: string[];
 };
 
 type BagTypeMaterial = {
   id: string;
   bag_type_id: string;
-  material_id: string;
+  material_id: string | null;
+  material_role: string;
   quantity_needed: number;
-  materials: Material;
 };
 
 type FabricCut = {
@@ -30,6 +31,27 @@ type FabricCut = {
   widthCm: number;
   quantity: number;
 };
+
+const MATERIAL_ROLE_OPTIONS = [
+  {
+    value: "outer_fabric",
+    label: "Outer Fabric",
+  },
+  {
+    value: "inner_fabric",
+    label: "Inner Fabric",
+  },
+  {
+    value: "strap",
+    label: "Strap",
+  },
+  {
+    value: "hardware",
+    label: "Hardware",
+  },
+];
+
+
 
 export default function ProductCostsPage() {
   const [bagTypes, setBagTypes] = useState<BagType[]>([]);
@@ -47,7 +69,7 @@ export default function ProductCostsPage() {
   const [loading, setLoading] = useState(true);
 
   // Add material form
-  const [selectedMaterialId, setSelectedMaterialId] =
+  const [selectedMaterialRole, setSelectedMaterialRole] =
     useState("");
 
   const [quantityNeeded, setQuantityNeeded] =
@@ -141,13 +163,8 @@ export default function ProductCostsPage() {
         id,
         bag_type_id,
         material_id,
-        quantity_needed,
-        materials (
-          id,
-          name,
-          unit,
-          cost_per_unit
-        )
+        material_role,
+        quantity_needed
       `
       )
       .eq("bag_type_id", bagTypeId);
@@ -162,63 +179,21 @@ export default function ProductCostsPage() {
       return;
     }
 
-    /*
-     * Supabase can return the nested relationship
-     * as an object or array depending on the
-     * relationship typing.
-     *
-     * Normalize it here so the rest of the page
-     * always receives:
-     *
-     * materials: Material
-     */
     const normalizedData: BagTypeMaterial[] =
-      (data || [])
-        .map((row: any) => {
-          const materialData =
-            Array.isArray(row.materials)
-              ? row.materials[0]
-              : row.materials;
+      (data || []).map((row: any) => ({
+        id: row.id,
+        bag_type_id: row.bag_type_id,
+        material_id: row.material_id || null,
+        material_role: row.material_role || "",
+        quantity_needed:
+          Number(row.quantity_needed) || 0,
+      }));
 
-          if (!materialData) {
-            return null;
-          }
-
-          return {
-            id: row.id,
-            bag_type_id:
-              row.bag_type_id,
-            material_id:
-              row.material_id,
-            quantity_needed:
-              Number(
-                row.quantity_needed
-              ) || 0,
-            materials: {
-              id: materialData.id,
-              name: materialData.name,
-              unit: materialData.unit,
-              cost_per_unit:
-                Number(
-                  materialData.cost_per_unit
-                ) || 0,
-            },
-          };
-        })
-        .filter(
-          (
-            row
-          ): row is BagTypeMaterial =>
-            row !== null
-        );
-
-    setBagTypeMaterials(
-      normalizedData
-    );
+    setBagTypeMaterials(normalizedData);
   }
 
   function resetMaterialForm() {
-    setSelectedMaterialId("");
+    setSelectedMaterialRole("");
     setQuantityNeeded(0);
 
     setFabricCuts([
@@ -290,31 +265,22 @@ export default function ProductCostsPage() {
   async function handleAddMaterial() {
     if (
       !selectedBagType ||
-      !selectedMaterialId
+      !selectedMaterialRole
     ) {
-      alert("Please select a material.");
+      alert("Please select a material role.");
       return;
     }
 
-    const selectedMaterial =
-      materials.find(
-        (material) =>
-          material.id ===
-          selectedMaterialId
+    if (!selectedRoleUnit) {
+      alert(
+        "No materials are assigned to this role yet. Add or edit a material in the Materials page first."
       );
-
-    if (!selectedMaterial) {
-      alert("Material not found.");
       return;
     }
 
-    let finalQuantity =
-      quantityNeeded;
+    let finalQuantity = quantityNeeded;
 
-    // Fabric uses square meters
-    if (
-      selectedMaterial.unit === "m²"
-    ) {
+    if (selectedRoleUnit === "m²") {
       if (totalFabricArea <= 0) {
         alert(
           "Please enter at least one valid fabric cut."
@@ -322,8 +288,7 @@ export default function ProductCostsPage() {
         return;
       }
 
-      finalQuantity =
-        totalFabricArea;
+      finalQuantity = totalFabricArea;
     } else {
       if (quantityNeeded <= 0) {
         alert(
@@ -333,42 +298,34 @@ export default function ProductCostsPage() {
       }
     }
 
-    /*
-     * If same material already exists,
-     * increase its recipe quantity.
-     */
-    const existingMaterial =
+    const existingRole =
       bagTypeMaterials.find(
         (item) =>
-          item.material_id ===
-          selectedMaterialId
+          item.material_role ===
+          selectedMaterialRole
       );
 
-    if (existingMaterial) {
+    if (existingRole) {
       const newQuantity =
-        existingMaterial.quantity_needed +
+        existingRole.quantity_needed +
         finalQuantity;
 
       const { error } =
         await supabase
           .from("bag_type_materials")
           .update({
-            quantity_needed:
-              newQuantity,
+            quantity_needed: newQuantity,
           })
-          .eq(
-            "id",
-            existingMaterial.id
-          );
+          .eq("id", existingRole.id);
 
       if (error) {
         console.error(
-          "Failed to update material:",
+          "Failed to update recipe role:",
           error
         );
 
         alert(
-          "Failed to update material."
+          "Failed to update recipe."
         );
 
         return;
@@ -381,8 +338,9 @@ export default function ProductCostsPage() {
             {
               bag_type_id:
                 selectedBagType,
-              material_id:
-                selectedMaterialId,
+              material_id: null,
+              material_role:
+                selectedMaterialRole,
               quantity_needed:
                 finalQuantity,
             },
@@ -390,12 +348,12 @@ export default function ProductCostsPage() {
 
       if (error) {
         console.error(
-          "Failed to add material:",
+          "Failed to add recipe role:",
           error
         );
 
         alert(
-          "Failed to add material."
+          "Failed to add recipe."
         );
 
         return;
@@ -501,38 +459,92 @@ export default function ProductCostsPage() {
     );
   }
 
-  // Calculate total material cost
-  const materialCost =
+  function getRoleMaterials(role: string) {
+    return materials.filter((material) =>
+      material.material_roles?.includes(role)
+    );
+  }
+
+  function getRoleUnit(role: string) {
+    return (
+      getRoleMaterials(role)[0]?.unit || ""
+    );
+  }
+
+  function getRoleCostRange(
+    role: string,
+    quantity: number
+  ) {
+    const roleMaterials =
+      getRoleMaterials(role);
+
+    if (roleMaterials.length === 0) {
+      return {
+        min: 0,
+        max: 0,
+      };
+    }
+
+    const costs = roleMaterials.map(
+      (material) =>
+        quantity *
+        Number(material.cost_per_unit || 0)
+    );
+
+    return {
+      min: Math.min(...costs),
+      max: Math.max(...costs),
+    };
+  }
+
+  const materialCostRange =
     bagTypeMaterials.reduce(
-      (sum, item) => {
-        return (
-          sum +
-          item.quantity_needed *
-            item.materials
-              .cost_per_unit
+      (totals, item) => {
+        const range = getRoleCostRange(
+          item.material_role,
+          item.quantity_needed
         );
+
+        return {
+          min: totals.min + range.min,
+          max: totals.max + range.max,
+        };
       },
-      0
+      {
+        min: 0,
+        max: 0,
+      }
     );
 
   const laborCost =
     laborCosts[selectedBagType] || 0;
 
-  const totalProductionCost =
-    materialCost + laborCost;
+  const totalProductionCostMin =
+    materialCostRange.min + laborCost;
+
+  const totalProductionCostMax =
+    materialCostRange.max + laborCost;
 
   const selectedBagTypeName =
     bagTypes.find(
       (bt) =>
         bt.id === selectedBagType
     )?.name || "";
+    
+    
+    
+  const selectedRoleMaterials =
+    selectedMaterialRole
+      ? getRoleMaterials(
+          selectedMaterialRole
+        )
+      : [];
 
-  const selectedMaterial =
-    materials.find(
-      (material) =>
-        material.id ===
-        selectedMaterialId
-    );
+  const selectedRoleUnit =
+    selectedRoleMaterials.length > 0
+      ? selectedRoleMaterials[0].unit
+      : "";
+
 
   return (
     <div className="space-y-8">
@@ -595,71 +607,56 @@ export default function ProductCostsPage() {
                 </h2>
 
                 <p className="mb-5 text-sm text-zinc-500">
-                  Fabric is calculated in
-                  square meters (m²). Other
-                  materials use their selected
-                  unit.
+                  Choose the role this product requires. Fabric roles use the cut calculator; other roles use their material unit.
                 </p>
 
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700">
-                    Material
-                  </label>
+                {/* MATERIAL ROLE */}
+<div>
+  <label className="block text-sm font-medium text-zinc-700">
+    Material Role
+  </label>
 
-                  <select
-                    value={
-                      selectedMaterialId
-                    }
-                    onChange={(e) => {
-                      setSelectedMaterialId(
-                        e.target.value
-                      );
+  <select
+    value={selectedMaterialRole}
+    onChange={(e) => {
+      setSelectedMaterialRole(
+        e.target.value
+      );
 
-                      setQuantityNeeded(
-                        0
-                      );
+      setQuantityNeeded(0);
 
-                      setFabricCuts([
-                        {
-                          id: Date.now(),
-                          lengthCm: 0,
-                          widthCm: 0,
-                          quantity: 1,
-                        },
-                      ]);
-                    }}
-                    className="mt-1 w-full rounded border px-3 py-2"
-                  >
-                    <option value="">
-                      Select material...
-                    </option>
+      setFabricCuts([
+        {
+          id: Date.now(),
+          lengthCm: 0,
+          widthCm: 0,
+          quantity: 1,
+        },
+      ]);
+    }}
+    className="mt-1 w-full rounded border px-3 py-2"
+  >
+    <option value="">
+      Select role...
+    </option>
 
-                    {materials.map(
-                      (material) => (
-                        <option
-                          key={
-                            material.id
-                          }
-                          value={
-                            material.id
-                          }
-                        >
-                          {
-                            material.name
-                          }{" "}
-                          (
-                          {
-                            material.unit
-                          }
-                          )
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
+    {MATERIAL_ROLE_OPTIONS.map(
+      (role) => (
+        <option
+          key={role.value}
+          value={role.value}
+        >
+          {role.label}
+        </option>
+      )
+    )}
+  </select>
+</div>
 
-                {/* FABRIC CALCULATOR */}
-                {selectedMaterial?.unit ===
+
+
+{/* FABRIC CALCULATOR */}
+                {selectedRoleUnit ===
                   "m²" && (
                   <div className="mt-5 rounded-lg border bg-zinc-50 p-4">
                     <h3 className="font-semibold text-zinc-900">
@@ -839,14 +836,14 @@ export default function ProductCostsPage() {
                 )}
 
                 {/* NON-FABRIC */}
-                {selectedMaterial &&
-                  selectedMaterial.unit !==
+                {selectedRoleUnit &&
+                  selectedRoleUnit !==
                     "m²" && (
                     <div className="mt-5">
                       <label className="block text-sm font-medium text-zinc-700">
                         Quantity Needed (
                         {
-                          selectedMaterial.unit
+                          selectedRoleUnit
                         }
                         )
                       </label>
@@ -873,14 +870,14 @@ export default function ProductCostsPage() {
                     </div>
                   )}
 
-                {selectedMaterial && (
+                {selectedRoleUnit && (
                   <button
                     onClick={
                       handleAddMaterial
                     }
                     className="mt-5 w-full rounded bg-black px-4 py-2 text-white hover:bg-zinc-800"
                   >
-                    Add Material to Recipe
+                    Add Role to Recipe
                   </button>
                 )}
               </div>
@@ -901,44 +898,53 @@ export default function ProductCostsPage() {
                   <div className="space-y-3">
                     {bagTypeMaterials.map(
                       (item) => {
-                        const itemCost =
-                          item.quantity_needed *
-                          item.materials
-                            .cost_per_unit;
+                        const roleLabel =
+                          MATERIAL_ROLE_OPTIONS.find(
+                            (role) =>
+                              role.value ===
+                              item.material_role
+                          )?.label ||
+                          item.material_role;
+
+                        const roleUnit =
+                          getRoleUnit(
+                            item.material_role
+                          );
+
+                        const itemRange =
+                          getRoleCostRange(
+                            item.material_role,
+                            item.quantity_needed
+                          );
 
                         return (
                           <div
-                            key={
-                              item.id
-                            }
+                            key={item.id}
                             className="flex items-center justify-between rounded-lg bg-zinc-50 p-3"
                           >
                             <div>
                               <p className="text-sm font-medium text-zinc-900">
-                                {
-                                  item
-                                    .materials
-                                    .name
-                                }
+                                {roleLabel}
                               </p>
 
                               <p className="text-xs text-zinc-600">
                                 {item.quantity_needed.toFixed(
                                   4
                                 )}{" "}
-                                {
-                                  item
-                                    .materials
-                                    .unit
-                                }{" "}
-                                × ₱
-                                {item.materials.cost_per_unit.toFixed(
-                                  2
-                                )}{" "}
-                                = ₱
-                                {itemCost.toFixed(
+                                {roleUnit || "unit"}
+                              </p>
+
+                              <p className="mt-1 text-xs text-zinc-500">
+                                Estimated material cost: ₱
+                                {itemRange.min.toFixed(
                                   2
                                 )}
+                                {itemRange.max !==
+                                itemRange.min
+                                  ? ` – ₱${itemRange.max.toFixed(
+                                      2
+                                    )}`
+                                  : ""}
                               </p>
                             </div>
 
@@ -974,9 +980,15 @@ export default function ProductCostsPage() {
 
                     <span className="text-sm font-medium text-zinc-900">
                       ₱
-                      {materialCost.toFixed(
+                      {materialCostRange.min.toFixed(
                         2
                       )}
+                      {materialCostRange.max !==
+                      materialCostRange.min
+                        ? ` – ₱${materialCostRange.max.toFixed(
+                            2
+                          )}`
+                        : ""}
                     </span>
                   </div>
 
@@ -1032,9 +1044,15 @@ export default function ProductCostsPage() {
 
                     <p className="text-2xl font-bold text-green-600">
                       ₱
-                      {totalProductionCost.toFixed(
+                      {totalProductionCostMin.toFixed(
                         2
                       )}
+                      {totalProductionCostMax !==
+                      totalProductionCostMin
+                        ? ` – ₱${totalProductionCostMax.toFixed(
+                            2
+                          )}`
+                        : ""}
                     </p>
                   </div>
                 </div>
