@@ -157,55 +157,92 @@ export default function OrderForm({
     setIsSubmitting(true);
 
     try {
-      // ============================================================
-      // CREATE MODE
-      // ============================================================
+  // ============================================================
+  // CREATE MODE
+  // ============================================================
 
-      if (mode === "create") {
-        const newOrderNumber = await generateOrderNumber();
-        const newTrackingToken = uuidv4();
+  if (mode === "create") {
+    const newOrderNumber = await generateOrderNumber();
+    const newTrackingToken = uuidv4();
 
-        setOrderNumber(newOrderNumber);
-        setTrackingToken(newTrackingToken);
+    setOrderNumber(newOrderNumber);
+    setTrackingToken(newTrackingToken);
 
-        const { error } = await supabase.from("orders").insert([
-          {
-            order_number: newOrderNumber,
-            customer_name: customerName,
-            email,
-            product,
-            outer_fabric: outerFabric,
-            inner_fabric: innerFabric,
-            strap_size:
-              selectedProduct.strapSize.length > 0
-                ? strapSize
-                : null,
-            strap_color:
-              selectedProduct.strapColor.length > 0
-                ? strapColor
-                : null,
-            mounting_type:
-              selectedProduct.mountingType.length > 0
-                ? mountingType
-                : null,
-            price,
-            target_completion_date: targetCompletionDate,
-            tracking_token: newTrackingToken,
-          },
-        ]);
+    // CALCULATE COSTS
+    const { data: bagType } = await supabase
+      .from("bag_types")
+      .select("id")
+      .eq("name", product)
+      .single();
 
-        if (error) {
-          console.error("Order save failed:", error.message);
-          alert(`Could not save order: ${error.message}`);
-          return;
-        }
+    let materialCost = 0;
+    if (bagType) {
+      const { data: bagMaterials } = await supabase
+        .from("bag_type_materials")
+        .select("quantity_needed, materials(cost_per_unit)")
+        .eq("bag_type_id", bagType.id);
 
-        await generateOrderImage(newOrderNumber);
-
-        setIsConfirmed(true);
-
-        return;
+      if (bagMaterials && bagMaterials.length > 0) {
+        materialCost = bagMaterials.reduce((sum: number, item: any) => {
+          return sum + item.quantity_needed * item.materials.cost_per_unit;
+        }, 0);
       }
+    }
+
+    const laborCosts: { [key: string]: number } = {
+      "Pouch": 200,
+      "Small Sling": 250,
+      "Big Sling": 300,
+    };
+    const laborCost = laborCosts[product] || 0;
+    const totalProductionCost = materialCost + laborCost;
+    const profit = price - totalProductionCost;
+    const profitMargin = (profit / price) * 100;
+
+    const { error } = await supabase.from("orders").insert([
+      {
+        order_number: newOrderNumber,
+        bag_type_id: bagType?.id,
+        customer_name: customerName,
+        email,
+        product,
+        outer_fabric: outerFabric,
+        inner_fabric: innerFabric,
+        strap_size:
+          selectedProduct.strapSize.length > 0
+            ? strapSize
+            : null,
+        strap_color:
+          selectedProduct.strapColor.length > 0
+            ? strapColor
+            : null,
+        mounting_type:
+          selectedProduct.mountingType.length > 0
+            ? mountingType
+            : null,
+        price,
+        target_completion_date: targetCompletionDate,
+        tracking_token: newTrackingToken,
+        material_cost: Math.round(materialCost * 100) / 100,
+        labor_cost: laborCost,
+        total_production_cost: Math.round(totalProductionCost * 100) / 100,
+        profit: Math.round(profit * 100) / 100,
+        profit_margin: Math.round(profitMargin * 100) / 100,
+      },
+    ]);
+
+    if (error) {
+      console.error("Order save failed:", error.message);
+      alert(`Could not save order: ${error.message}`);
+      return;
+    }
+
+    await generateOrderImage(newOrderNumber);
+
+    setIsConfirmed(true);
+
+    return;
+  }
 
       // ============================================================
       // EDIT MODE
