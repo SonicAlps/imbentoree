@@ -2,6 +2,26 @@ import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  /*
+   * PUBLIC CUSTOMER PAGES
+   *
+   * These pages do not require authentication,
+   * so return immediately before talking to Supabase Auth.
+   */
+  const isPublicPage =
+    pathname === "/waitlist" ||
+    pathname.startsWith("/track/");
+
+  if (isPublicPage) {
+    return NextResponse.next();
+  }
+
+  /*
+   * Everything below here may require authentication.
+   */
+
   let response = NextResponse.next({
     request,
   });
@@ -24,9 +44,15 @@ export async function proxy(request: NextRequest) {
             request,
           });
 
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
+          cookiesToSet.forEach(
+            ({ name, value, options }) => {
+              response.cookies.set(
+                name,
+                value,
+                options
+              );
+            }
+          );
         },
       },
     }
@@ -41,18 +67,9 @@ export async function proxy(request: NextRequest) {
     user ? `Logged in as ${user.email}` : "NO USER"
   );
 
-  const pathname = request.nextUrl.pathname;
-
-  // PUBLIC CUSTOMER PAGES
-  const isPublicPage =
-    pathname === "/waitlist" ||
-    pathname.startsWith("/track/");
-
-  if (isPublicPage) {
-    return response;
-  }
-
-  // LOGIN PAGE
+  /*
+   * LOGIN PAGE
+   */
   if (pathname === "/login") {
     if (user) {
       return NextResponse.redirect(
@@ -63,7 +80,9 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // EVERYTHING ELSE REQUIRES LOGIN
+  /*
+   * EVERYTHING ELSE REQUIRES LOGIN
+   */
   if (!user) {
     return NextResponse.redirect(
       new URL("/login", request.url)

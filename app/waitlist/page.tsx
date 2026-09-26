@@ -333,8 +333,7 @@ export default function WaitlistPage() {
 
                   <p className="mt-4 text-sm leading-6 text-white/60 sm:mt-5 sm:text-base sm:leading-7">
                     Take the Traffic Handbag beyond the
-                    city. Choose your colorway, join the
-                    waitlist, and bring just what matters
+                    city. Choose your color and just bring what matters
                     on your next outdoor escape.
                   </p>
                 </div>
