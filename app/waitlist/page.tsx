@@ -332,9 +332,8 @@ export default function WaitlistPage() {
                   </h1>
 
                   <p className="mt-4 text-sm leading-6 text-white/60 sm:mt-5 sm:text-base sm:leading-7">
-                    Take the Traffic Handbag beyond the
-                    city. Choose your color and just bring what matters
-                    on your next outdoor escape.
+                    Take the Traffic Handbag beyond the city.
+                    Choose your color and bring only what matters on your next outdoor escape.
                   </p>
                 </div>
 
@@ -606,10 +605,7 @@ export default function WaitlistPage() {
                       <div className="mt-7 border-t border-white/10 pt-6">
 
                         <p className="text-xs leading-5 text-white/35 sm:text-sm sm:leading-6">
-                          No payment has been made yet. Your
-                          place on the waitlist lets us know
-                          which Traffic Handbag you're
-                          interested in.
+                          We’ll send you a confirmation email once the waitlist is complete. Thank you!
                         </p>
 
                       </div>
