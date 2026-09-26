@@ -1,30 +1,34 @@
 // components/order/order-preview.tsx
 
+"use client";
+
 import { toCamelCaseName } from "@/src/lib/format";
 import Image from "next/image";
 import QRCodeSVG from "react-qr-code";
+
+type PreviewMaterial = {
+  label: string;
+  materialName: string;
+};
 
 interface OrderPreviewProps {
   orderNumber: string;
   customerName: string;
   product: string;
-  outerFabric: string;
-  innerFabric: string;
-  strapMaterial: string;
-  hardware: string;
+  buildMaterials: PreviewMaterial[];
   price: number;
   targetCompletionDate: string;
   trackingToken?: string;
 }
 
+const normalizeLabel = (value: string) =>
+  value.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+
 export default function OrderPreview({
   orderNumber,
   customerName,
   product,
-  outerFabric,
-  innerFabric,
-  strapMaterial,
-  hardware,
+  buildMaterials,
   price,
   targetCompletionDate,
   trackingToken,
@@ -35,6 +39,40 @@ export default function OrderPreview({
     trackingToken && process.env.NEXT_PUBLIC_APP_URL
       ? `${process.env.NEXT_PUBLIC_APP_URL}/track/${trackingToken}`
       : "";
+
+  // The order/build sheet stays completely flexible.
+  // These mappings only control how that flexible data is PRESENTED
+  // on the customer-facing order ticket.
+  const outerFabric = buildMaterials.find(
+    (item) => normalizeLabel(item.label) === "outer fabric"
+  )?.materialName;
+
+  const innerFabric = buildMaterials.find(
+    (item) => normalizeLabel(item.label) === "inner fabric"
+  )?.materialName;
+
+  const strapMaterials = buildMaterials
+    .filter((item) => {
+      const label = normalizeLabel(item.label);
+      return label === "strap" || label.includes("strap material") || label.includes("paracord");
+    })
+    .map((item) => item.materialName);
+
+  const primaryLabels = new Set([
+    "outer fabric",
+    "inner fabric",
+    "strap",
+    "strap material",
+  ]);
+
+  const hardwareAndOtherComponents = buildMaterials.filter((item) => {
+    const label = normalizeLabel(item.label);
+
+    if (primaryLabels.has(label)) return false;
+    if (label.includes("paracord")) return false;
+
+    return true;
+  });
 
   return (
     <div
@@ -58,13 +96,8 @@ export default function OrderPreview({
             />
 
             <div>
-              <h1 className="text-lg font-bold tracking-tight">
-                Imbento Bags
-              </h1>
-
-              <p className="text-xs text-zinc-500">
-                Custom Order Ticket
-              </p>
+              <h1 className="text-lg font-bold tracking-tight">Imbento Bags</h1>
+              <p className="text-xs text-zinc-500">Custom Order Ticket</p>
             </div>
           </div>
 
@@ -77,73 +110,61 @@ export default function OrderPreview({
         {/* CUSTOMER */}
         <div className="mt-6 space-y-3 text-sm">
           <div className="flex justify-between border-b pb-2">
-            <span className="text-zinc-500">
-              Customer:
-            </span>
-
-            <span className="font-semibold">
-              {customerName || "—"}
-            </span>
+            <span className="text-zinc-500">Customer:</span>
+            <span className="font-semibold">{customerName || "—"}</span>
           </div>
         </div>
 
         {/* SPECIFICATIONS */}
         <div className="mt-6 space-y-3 text-sm">
           <div className="flex justify-between border-b pb-2">
-            <span className="text-zinc-500">
-              Product:
-            </span>
-
-            <span className="font-semibold">
-              {product}
-            </span>
+            <span className="text-zinc-500">Product:</span>
+            <span className="font-semibold">{product}</span>
           </div>
 
           {outerFabric && (
             <div className="flex justify-between border-b pb-2">
-              <span className="text-zinc-500">
-                Outer Fabric:
-              </span>
-
-              <span className="font-medium">
-                {outerFabric}
-              </span>
+              <span className="text-zinc-500">Outer Fabric:</span>
+              <span className="font-medium">{outerFabric}</span>
             </div>
           )}
 
           {innerFabric && (
             <div className="flex justify-between border-b pb-2">
-              <span className="text-zinc-500">
-                Inner Fabric:
-              </span>
-
-              <span className="font-medium">
-                {innerFabric}
-              </span>
+              <span className="text-zinc-500">Inner Fabric:</span>
+              <span className="font-medium">{innerFabric}</span>
             </div>
           )}
 
-          {strapMaterial && (
-            <div className="flex justify-between border-b pb-2">
-              <span className="text-zinc-500">
-                Strap:
-              </span>
-
-              <span className="font-medium">
-                {strapMaterial}
-              </span>
+          {strapMaterials.length > 0 && (
+            <div className="flex justify-between gap-6 border-b pb-2">
+              <span className="shrink-0 text-zinc-500">Strap:</span>
+              <div className="space-y-1 text-right font-medium">
+                {strapMaterials.map((materialName, index) => (
+                  <div key={`${materialName}-${index}`}>{materialName}</div>
+                ))}
+              </div>
             </div>
           )}
 
-          {hardware && (
-            <div className="flex justify-between border-b pb-2">
-              <span className="text-zinc-500">
-                Hardware:
-              </span>
-
-              <span className="font-medium">
-                {hardware}
-              </span>
+          {hardwareAndOtherComponents.length > 0 && (
+            <div className="flex justify-between gap-6 border-b pb-2">
+              <span className="shrink-0 text-zinc-500">Hardware:</span>
+              <div className="space-y-1 text-right">
+                {hardwareAndOtherComponents.map((item, index) => (
+                  <div
+                    key={`${item.label}-${item.materialName}-${index}`}
+                    className="font-medium"
+                  >
+                    <span>{item.materialName}</span>
+                    {item.label && normalizeLabel(item.label) !== "hardware" ? (
+                      <span className="ml-1.5 text-xs font-normal text-zinc-400">
+                        ({item.label})
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -155,23 +176,21 @@ export default function OrderPreview({
               </span>
 
               <span className="font-mono text-sm font-bold text-zinc-900">
-                {new Date(
-                  `${targetCompletionDate}T00:00:00`
-                ).toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
+                {new Date(`${targetCompletionDate}T00:00:00`).toLocaleDateString(
+                  "en-PH",
+                  {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  }
+                )}
               </span>
             </div>
           )}
 
           {/* TOTAL */}
           <div className="mt-6 flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-500">
-              Total
-            </span>
-
+            <span className="text-sm font-medium text-zinc-500">Total</span>
             <span className="rounded bg-black px-3 py-1.5 font-mono text-lg font-bold text-white">
               ₱{price.toFixed(2)}
             </span>
@@ -182,8 +201,7 @@ export default function OrderPreview({
       {/* FOOTER */}
       <div className="mt-8 flex items-center justify-between border-t border-dashed border-zinc-200 pt-4">
         <span className="block text-xs font-medium text-zinc-400">
-          Thank you, {customerName || "customer"}, for ordering the{" "}
-          {product}!
+          Thank you, {customerName || "customer"}, for ordering the {product}!
         </span>
 
         {/* QR CODE */}
@@ -196,10 +214,7 @@ export default function OrderPreview({
               bgColor="white"
               fgColor="black"
             />
-
-            <p className="text-xs text-zinc-500">
-              Scan to track
-            </p>
+            <p className="text-xs text-zinc-500">Scan to track</p>
           </div>
         )}
       </div>

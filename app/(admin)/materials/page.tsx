@@ -1,314 +1,191 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 
 type Material = {
   id: string;
   name: string;
+  material_type: string | null;
+  allowed_uses: string[];
   unit: string;
   cost_per_unit: number;
   supplier: string | null;
-
   purchase_length_m: number | null;
   purchase_width_m: number | null;
   purchase_price: number | null;
-
   purchase_quantity: number | null;
   purchase_unit_amount: number | null;
-
-  material_roles: string[];
-
   created_at: string;
 };
 
+const ALLOWED_USE_OPTIONS = [
+  { value: "outer_fabric", label: "Outer Fabric" },
+  { value: "inner_fabric", label: "Inner Fabric" },
+  { value: "strap", label: "Strap" },
+  { value: "strap_mounting", label: "Strap Mounting" },
+];
+
 const UNIT_OPTIONS = [
-  {
-    value: "m²",
-    label: "Square meter (m²)",
-    shortLabel: "m²",
-  },
-  {
-    value: "meter",
-    label: "Meter (m)",
-    shortLabel: "m",
-  },
-  {
-    value: "yard",
-    label: "Yard (yd)",
-    shortLabel: "yd",
-  },
-  {
-    value: "piece",
-    label: "Piece (pc)",
-    shortLabel: "pc",
-  },
-  {
-    value: "spool",
-    label: "Spool",
-    shortLabel: "spool",
-  },
-  {
-    value: "kg",
-    label: "Kilogram (kg)",
-    shortLabel: "kg",
-  },
+  { value: "m²", label: "Square meter (m²)", shortLabel: "m²" },
+  { value: "meter", label: "Meter (m)", shortLabel: "m" },
+  { value: "yard", label: "Yard (yd)", shortLabel: "yd" },
+  { value: "piece", label: "Piece (pc)", shortLabel: "pc" },
+  { value: "spool", label: "Spool", shortLabel: "spool" },
+  { value: "kg", label: "Kilogram (kg)", shortLabel: "kg" },
 ];
 
 export default function MaterialsPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Basic material information
   const [name, setName] = useState("");
+  const [materialType, setMaterialType] = useState("");
+  const [allowedUses, setAllowedUses] = useState<string[]>([]);
   const [unit, setUnit] = useState("meter");
   const [supplier, setSupplier] = useState("");
-
-  // Fabric purchase information
-  const [purchaseLengthM, setPurchaseLengthM] =
-    useState<number>(0);
-
-  const [purchaseWidthM, setPurchaseWidthM] =
-    useState<number>(0);
-
-  // Generic purchase information
-  const [purchaseQuantity, setPurchaseQuantity] =
-    useState<number>(0);
-
-  const [purchaseUnitAmount, setPurchaseUnitAmount] =
-    useState<number>(0);
-
-  const [purchasePrice, setPurchasePrice] =
-    useState<number>(0);
-    
-  const [materialRoles, setMaterialRoles] =
-  useState<string[]>([]);
-
-  const [editingId, setEditingId] =
-    useState<string | null>(null);
+  const [purchaseLengthM, setPurchaseLengthM] = useState(0);
+  const [purchaseWidthM, setPurchaseWidthM] = useState(0);
+  const [purchaseQuantity, setPurchaseQuantity] = useState(0);
+  const [purchaseUnitAmount, setPurchaseUnitAmount] = useState(0);
+  const [purchasePrice, setPurchasePrice] = useState(0);
 
   useEffect(() => {
-    fetchMaterials();
+    void fetchMaterials();
   }, []);
 
   async function fetchMaterials() {
     setLoading(true);
-
     const { data, error } = await supabase
       .from("materials")
-      .select("*")
+      .select(
+        "id, name, material_type, allowed_uses, unit, cost_per_unit, supplier, purchase_length_m, purchase_width_m, purchase_price, purchase_quantity, purchase_unit_amount, created_at"
+      )
       .order("name");
 
     if (error) {
-      console.error(
-        "Failed to fetch materials:",
-        error
-      );
+      console.error("Failed to fetch materials:", error.message);
+      alert(`Could not load materials: ${error.message}`);
+      setMaterials([]);
     } else {
-      setMaterials(data || []);
+      setMaterials(((data as Material[]) || []).map((item) => ({ ...item, allowed_uses: item.allowed_uses || [] })));
     }
-
     setLoading(false);
   }
 
-  function getUnitInfo(unitValue: string) {
-    return (
-      UNIT_OPTIONS.find(
-        (option) => option.value === unitValue
-      ) || UNIT_OPTIONS[0]
-    );
-  }
-
-  const MATERIAL_ROLE_OPTIONS = [
-  {
-    value: "outer_fabric",
-    label: "Outer Fabric",
-  },
-  {
-    value: "inner_fabric",
-    label: "Inner Fabric",
-  },
-  {
-    value: "strap",
-    label: "Strap",
-  },
-  {
-    value: "hardware",
-    label: "Hardware",
-  },
-];
-
-  /*
-   * ==========================================
-   * FABRIC CALCULATION
-   * ==========================================
-   *
-   * Example:
-   *
-   * 1m × 1.5m = 1.5m²
-   * ₱400 ÷ 1.5m² = ₱266.67/m²
-   */
-
   const purchasedFabricArea =
-    purchaseLengthM > 0 &&
-    purchaseWidthM > 0
+    purchaseLengthM > 0 && purchaseWidthM > 0
       ? purchaseLengthM * purchaseWidthM
       : 0;
 
   const calculatedFabricCostPerM2 =
-    purchasedFabricArea > 0 &&
-    purchasePrice > 0
+    purchasedFabricArea > 0 && purchasePrice > 0
       ? purchasePrice / purchasedFabricArea
       : 0;
 
-  /*
-   * ==========================================
-   * GENERIC MATERIAL CALCULATION
-   * ==========================================
-   *
-   * Example:
-   *
-   * 1 roll × 3 yards
-   * ₱300 total
-   *
-   * Total = 3 yards
-   * Cost = ₱100/yard
-   */
-
   const totalPurchasedAmount =
-    purchaseQuantity > 0 &&
-    purchaseUnitAmount > 0
-      ? purchaseQuantity *
-        purchaseUnitAmount
+    purchaseQuantity > 0 && purchaseUnitAmount > 0
+      ? purchaseQuantity * purchaseUnitAmount
       : 0;
 
   const calculatedCostPerUnit =
-    totalPurchasedAmount > 0 &&
-    purchasePrice > 0
-      ? purchasePrice /
-        totalPurchasedAmount
+    totalPurchasedAmount > 0 && purchasePrice > 0
+      ? purchasePrice / totalPurchasedAmount
       : 0;
+
+  const previewCost =
+    unit === "m²" ? calculatedFabricCostPerM2 : calculatedCostPerUnit;
+
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setMaterialType("");
+    setAllowedUses([]);
+    setUnit("meter");
+    setSupplier("");
+    setPurchaseLengthM(0);
+    setPurchaseWidthM(0);
+    setPurchaseQuantity(0);
+    setPurchaseUnitAmount(0);
+    setPurchasePrice(0);
+  }
+
+  function startEdit(material: Material) {
+    setEditingId(material.id);
+    setName(material.name);
+    setMaterialType(material.material_type ?? "");
+    setAllowedUses(material.allowed_uses || []);
+    setUnit(material.unit);
+    setSupplier(material.supplier ?? "");
+    setPurchaseLengthM(Number(material.purchase_length_m) || 0);
+    setPurchaseWidthM(Number(material.purchase_width_m) || 0);
+    setPurchaseQuantity(Number(material.purchase_quantity) || 0);
+    setPurchaseUnitAmount(Number(material.purchase_unit_amount) || 0);
+    setPurchasePrice(Number(material.purchase_price) || 0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function toggleAllowedUse(value: string) {
+    setAllowedUses((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+  }
 
   async function handleSave() {
     if (!name.trim()) {
       alert("Please enter a material name.");
       return;
     }
+    if (!materialType.trim()) {
+      alert("Please enter a material type, such as Honeycomb, Cordura, D-Ring, Hook, Webbing, or Paracord.");
+      return;
+    }
 
     let finalCostPerUnit = 0;
-
-    /*
-     * FABRIC
-     */
     if (unit === "m²") {
-      if (
-        purchaseLengthM <= 0 ||
-        purchaseWidthM <= 0 ||
-        purchasePrice <= 0
-      ) {
-        alert(
-          "Please enter the fabric length, width, and purchase price."
-        );
+      if (purchaseLengthM <= 0 || purchaseWidthM <= 0 || purchasePrice <= 0) {
+        alert("For m² materials, enter purchase length, width, and price.");
         return;
       }
-
-      finalCostPerUnit =
-        calculatedFabricCostPerM2;
-    }
-
-    /*
-     * ALL OTHER UNITS
-     */
-    else {
-      if (
-        purchaseQuantity <= 0 ||
-        purchaseUnitAmount <= 0 ||
-        purchasePrice <= 0
-      ) {
-        alert(
-          "Please enter the purchase quantity, amount per purchase unit, and purchase price."
-        );
-        return;
-      }
-
-      finalCostPerUnit =
-        calculatedCostPerUnit;
-    }
-
-    const materialData = {
-  name: name.trim(),
-  unit,
-  cost_per_unit: finalCostPerUnit,
-  supplier:
-    supplier.trim() || null,
-
-  material_roles: materialRoles,
-
-  /*
-   * Fabric-specific fields
-   */
-  purchase_length_m:
-    unit === "m²"
-      ? purchaseLengthM
-      : null,
-
-  purchase_width_m:
-    unit === "m²"
-      ? purchaseWidthM
-      : null,
-
-  /*
-   * Generic purchase fields
-   */
-  purchase_quantity:
-    unit === "m²"
-      ? null
-      : purchaseQuantity,
-
-  purchase_unit_amount:
-    unit === "m²"
-      ? null
-      : purchaseUnitAmount,
-
-  purchase_price: purchasePrice,
-};
-
-    if (editingId) {
-      const { error } = await supabase
-        .from("materials")
-        .update(materialData)
-        .eq("id", editingId);
-
-      if (error) {
-        console.error(
-          "Update failed:",
-          error
-        );
-
-        alert(
-          "Failed to update material."
-        );
-
-        return;
-      }
+      finalCostPerUnit = calculatedFabricCostPerM2;
     } else {
-      const { error } = await supabase
-        .from("materials")
-        .insert([materialData]);
-
-      if (error) {
-        console.error(
-          "Insert failed:",
-          error
-        );
-
-        alert(
-          "Failed to create material."
-        );
-
+      if (purchaseQuantity <= 0 || purchaseUnitAmount <= 0 || purchasePrice <= 0) {
+        alert("Enter purchase quantity, amount per purchased unit, and total price.");
         return;
       }
+      finalCostPerUnit = calculatedCostPerUnit;
+    }
+
+    const payload = {
+      name: name.trim(),
+      material_type: materialType.trim(),
+      allowed_uses: allowedUses,
+      unit,
+      supplier: supplier.trim() || null,
+      purchase_length_m: unit === "m²" ? purchaseLengthM : null,
+      purchase_width_m: unit === "m²" ? purchaseWidthM : null,
+      purchase_quantity: unit === "m²" ? null : purchaseQuantity,
+      purchase_unit_amount: unit === "m²" ? null : purchaseUnitAmount,
+      purchase_price: purchasePrice,
+      cost_per_unit: Math.round(finalCostPerUnit * 10000) / 10000,
+    };
+
+    setSaving(true);
+    const query = editingId
+      ? supabase.from("materials").update(payload).eq("id", editingId)
+      : supabase.from("materials").insert([payload]);
+
+    const { error } = await query;
+    setSaving(false);
+
+    if (error) {
+      console.error("Material save failed:", error.message);
+      alert(`Could not save material: ${error.message}`);
+      return;
     }
 
     resetForm();
@@ -316,832 +193,122 @@ export default function MaterialsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this material?")) {
+    if (!confirm("Delete this material? Referenced materials may be protected by order history.")) {
       return;
     }
 
-    const { error } = await supabase
-      .from("materials")
-      .delete()
-      .eq("id", id);
-
+    const { error } = await supabase.from("materials").delete().eq("id", id);
     if (error) {
-      console.error(
-        "Delete failed:",
-        error
-      );
-
-      alert(
-        "Failed to delete material."
-      );
-
+      alert(`Could not delete material: ${error.message}`);
       return;
     }
-
     await fetchMaterials();
   }
 
-  function handleEdit(material: Material) {
-    setName(material.name);
-    setUnit(material.unit);
-
-    setSupplier(
-      material.supplier || ""
-    );
-
-      setMaterialRoles(
-       material.material_roles || []
-    );
-
-
-    setPurchaseLengthM(
-      material.purchase_length_m || 0
-    );
-
-    setPurchaseWidthM(
-      material.purchase_width_m || 0
-    );
-
-    setPurchaseQuantity(
-      material.purchase_quantity || 0
-    );
-
-    setPurchaseUnitAmount(
-      material.purchase_unit_amount || 0
-    );
-
-    setPurchasePrice(
-      material.purchase_price || 0
-    );
-
-  
-    setEditingId(material.id);
-    setIsAdding(true);
-  }
-
-  function resetForm() {
-    setName("");
-    setUnit("meter");
-    setSupplier("");
-
-    setMaterialRoles([]);
-
-    setPurchaseLengthM(0);
-    setPurchaseWidthM(0);
-
-    setPurchaseQuantity(0);
-    setPurchaseUnitAmount(0);
-
-    setPurchasePrice(0);
-
-    setEditingId(null);
-    setIsAdding(false);
-  }
-
   return (
-    <div className="space-y-8 rounded-2xl bg-zinc-50 p-6 text-zinc-900">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900">
-          Materials
-        </h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          Create each physical stock item as its own material. Include identifying
-          details such as size, color, or type in the name (for example:
-          Black Nylon Webbing 1 inch or Black Swivel Hook 1 inch).
-        </p>
+    <div className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">Materials</h1>
+          <p className="mt-2 text-sm text-zinc-600">
+            Master reference for physical materials, current costs, and where each material should appear in the guided order form.
+          </p>
+        </div>
 
-        <p className="mt-2 text-zinc-600">
-          Manage raw materials, purchase
-          information, and costing.
-        </p>
-      </div>
+        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <label className="text-sm font-medium">
+              Material Name
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Black Honeycomb" className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" />
+            </label>
 
-      {/* ADD / EDIT FORM */}
-      {isAdding && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-zinc-900">
-            {editingId
-              ? "Edit Material"
-              : "Add Material"}
-          </h2>
+            <label className="text-sm font-medium">
+              Material Type
+              <input value={materialType} onChange={(e) => setMaterialType(e.target.value)} placeholder="Honeycomb, D-Ring, Hook..." className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" />
+              <span className="mt-1 block text-xs font-normal text-zinc-500">What the material physically is—not where a product must use it.</span>
+            </label>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* MATERIAL NAME */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-700">
-                Material Name *
-              </label>
-
-              <input
-                type="text"
-                value={name}
-                onChange={(e) =>
-                  setName(e.target.value)
-                }
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                placeholder="e.g., 1 inch Nylon Webbing"
-              />
+            <div className="text-sm font-medium md:col-span-2 lg:col-span-3">
+              <p>Allowed Uses</p>
+              <p className="mt-1 text-xs font-normal text-zinc-500">These only filter the four guided order fields. Additional Materials can still use any material.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {ALLOWED_USE_OPTIONS.map((option) => {
+                  const active = allowedUses.includes(option.value);
+                  return (
+                    <button key={option.value} type="button" onClick={() => toggleAllowedUse(option.value)} className={`rounded-full border px-3 py-2 text-xs font-medium transition ${active ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-600 hover:border-zinc-500"}`}>
+                      {active ? "✓ " : ""}{option.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* COSTING UNIT */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-700">
-                Costing Unit *
-              </label>
-
-              <select
-                value={unit}
-                onChange={(e) => {
-                  setUnit(e.target.value);
-
-                  setPurchaseLengthM(0);
-                  setPurchaseWidthM(0);
-                  setPurchaseQuantity(0);
-                  setPurchaseUnitAmount(0);
-                  setPurchasePrice(0);
-                }}
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-              >
-                {UNIT_OPTIONS.map(
-                  (option) => (
-                    <option
-                      key={option.value}
-                      value={option.value}
-                    >
-                      {option.label}
-                    </option>
-                  )
-                )}
+            <label className="text-sm font-medium">
+              Unit
+              <select value={unit} onChange={(e) => setUnit(e.target.value)} className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3">
+                {UNIT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-            </div>
+            </label>
 
-            {/* ==================================
-                FABRIC
-                ================================== */}
+            <label className="text-sm font-medium">
+              Supplier
+              <input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" />
+            </label>
+
             {unit === "m²" ? (
-              <div className="sm:col-span-2">
-                <div className="rounded-xl border border-zinc-200 bg-white p-5">
-                  <h3 className="font-semibold text-zinc-900">
-                    Fabric Purchase
-                  </h3>
-
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Enter the actual dimensions
-                    and price of the fabric you
-                    bought. Imbentoree calculates
-                    the cost per m² automatically.
-                  </p>
-
-                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                    {/* LENGTH */}
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700">
-                        Length (m)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={
-                          purchaseLengthM || ""
-                        }
-                        onChange={(e) =>
-                          setPurchaseLengthM(
-                            parseFloat(
-                              e.target.value
-                            ) || 0
-                          )
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                        placeholder="1"
-                      />
-                    </div>
-
-                    {/* WIDTH */}
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700">
-                        Width (m)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={
-                          purchaseWidthM || ""
-                        }
-                        onChange={(e) =>
-                          setPurchaseWidthM(
-                            parseFloat(
-                              e.target.value
-                            ) || 0
-                          )
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                        placeholder="1.5"
-                      />
-                    </div>
-
-                    {/* PRICE */}
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700">
-                        Purchase Price (₱)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={
-                          purchasePrice || ""
-                        }
-                        onChange={(e) =>
-                          setPurchasePrice(
-                            parseFloat(
-                              e.target.value
-                            ) || 0
-                          )
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                        placeholder="400"
-                      />
-                    </div>
-                  </div>
-
-                  {/* FABRIC RESULT */}
-                  {purchasedFabricArea >
-                    0 &&
-                    purchasePrice > 0 && (
-                      <div className="mt-5 rounded-lg bg-zinc-50 p-4">
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          <div>
-                            <p className="text-xs text-zinc-500">
-                              Purchased Area
-                            </p>
-
-                            <p className="text-lg font-semibold text-zinc-900">
-                              {purchasedFabricArea.toFixed(
-                                2
-                              )}{" "}
-                              m²
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-zinc-500">
-                              Purchase Price
-                            </p>
-
-                            <p className="text-lg font-semibold text-zinc-900">
-                              ₱
-                              {purchasePrice.toFixed(
-                                2
-                              )}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-zinc-500">
-                              Cost per m²
-                            </p>
-
-                            <p className="text-lg font-bold text-green-600">
-                              ₱
-                              {calculatedFabricCostPerM2.toFixed(
-                                2
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        <p className="mt-3 text-xs text-zinc-500">
-                          ₱
-                          {purchasePrice.toFixed(
-                            2
-                          )}{" "}
-                          ÷{" "}
-                          {purchasedFabricArea.toFixed(
-                            2
-                          )}{" "}
-                          m² = ₱
-                          {calculatedFabricCostPerM2.toFixed(
-                            2
-                          )}
-                          /m²
-                        </p>
-                      </div>
-                    )}
-                </div>
-              </div>
+              <>
+                <label className="text-sm font-medium">Purchased Length (m)<input type="number" min="0" step="0.01" value={purchaseLengthM || ""} onChange={(e) => setPurchaseLengthM(Number(e.target.value))} className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" /></label>
+                <label className="text-sm font-medium">Purchased Width (m)<input type="number" min="0" step="0.01" value={purchaseWidthM || ""} onChange={(e) => setPurchaseWidthM(Number(e.target.value))} className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" /></label>
+              </>
             ) : (
-              /* ==================================
-                 OTHER MATERIALS
-                 ================================== */
-              <div className="sm:col-span-2">
-                <div className="rounded-xl border border-zinc-200 bg-white p-5">
-                  <h3 className="font-semibold text-zinc-900">
-                    Purchase Information
-                  </h3>
-
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Enter what you actually
-                    bought. Imbentoree will calculate
-                    the cost per{" "}
-                    {
-                      getUnitInfo(unit)
-                        .shortLabel
-                    }{" "}
-                    automatically.
-                  </p>
-
-                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                    {/* PURCHASE QUANTITY */}
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700">
-                        Purchase Quantity
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={
-                          purchaseQuantity ||
-                          ""
-                        }
-                        onChange={(e) =>
-                          setPurchaseQuantity(
-                            parseFloat(
-                              e.target.value
-                            ) || 0
-                          )
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                        placeholder="1"
-                      />
-
-                      <p className="mt-1 text-xs text-zinc-500">
-                        Number of rolls, packs,
-                        or purchase units
-                      </p>
-                    </div>
-
-                    {/* AMOUNT PER PURCHASE UNIT */}
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700">
-                        Amount per Purchase Unit (
-                        {
-                          getUnitInfo(unit)
-                            .shortLabel
-                        }
-                        )
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={
-                          purchaseUnitAmount ||
-                          ""
-                        }
-                        onChange={(e) =>
-                          setPurchaseUnitAmount(
-                            parseFloat(
-                              e.target.value
-                            ) || 0
-                          )
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                        placeholder="3"
-                      />
-
-                      <p className="mt-1 text-xs text-zinc-500">
-                        Amount contained in each
-                        roll, pack, or purchase unit
-                      </p>
-                    </div>
-
-                    {/* PURCHASE PRICE */}
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700">
-                        Purchase Price (₱)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={
-                          purchasePrice || ""
-                        }
-                        onChange={(e) =>
-                          setPurchasePrice(
-                            parseFloat(
-                              e.target.value
-                            ) || 0
-                          )
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                        placeholder="300"
-                      />
-                    </div>
-                  </div>
-
-                  {/* GENERIC RESULT */}
-                  {totalPurchasedAmount >
-                    0 &&
-                    purchasePrice > 0 && (
-                      <div className="mt-5 rounded-lg bg-zinc-50 p-4">
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          <div>
-                            <p className="text-xs text-zinc-500">
-                              Total Material Purchased
-                            </p>
-
-                            <p className="text-lg font-semibold text-zinc-900">
-                              {
-                                totalPurchasedAmount
-                              }{" "}
-                              {
-                                getUnitInfo(
-                                  unit
-                                ).shortLabel
-                              }
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-zinc-500">
-                              Purchase Price
-                            </p>
-
-                            <p className="text-lg font-semibold text-zinc-900">
-                              ₱
-                              {purchasePrice.toFixed(
-                                2
-                              )}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-zinc-500">
-                              Cost per{" "}
-                              {
-                                getUnitInfo(
-                                  unit
-                                ).shortLabel
-                              }
-                            </p>
-
-                            <p className="text-lg font-bold text-green-600">
-                              ₱
-                              {calculatedCostPerUnit.toFixed(
-                                2
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        <p className="mt-3 text-xs text-zinc-500">
-                          ₱
-                          {purchasePrice.toFixed(
-                            2
-                          )}{" "}
-                          ÷{" "}
-                          {
-                            totalPurchasedAmount
-                          }{" "}
-                          {
-                            getUnitInfo(
-                              unit
-                            ).shortLabel
-                          }{" "}
-                          = ₱
-                          {calculatedCostPerUnit.toFixed(
-                            2
-                          )}
-                          /{
-                            getUnitInfo(
-                              unit
-                            ).shortLabel
-                          }
-                        </p>
-                      </div>
-                    )}
-                </div>
-              </div>
+              <>
+                <label className="text-sm font-medium">Purchase Quantity<input type="number" min="0" step="0.01" value={purchaseQuantity || ""} onChange={(e) => setPurchaseQuantity(Number(e.target.value))} className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" /></label>
+                <label className="text-sm font-medium">Amount per Purchased Unit<input type="number" min="0" step="0.01" value={purchaseUnitAmount || ""} onChange={(e) => setPurchaseUnitAmount(Number(e.target.value))} className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" /></label>
+              </>
             )}
 
-            {/* SUPPLIER */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-700">
-                Supplier
-              </label>
+            <label className="text-sm font-medium">
+              Purchase Price (₱)
+              <input type="number" min="0" step="0.01" value={purchasePrice || ""} onChange={(e) => setPurchasePrice(Number(e.target.value))} className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3" />
+            </label>
 
-              <input
-                type="text"
-                value={supplier}
-                onChange={(e) =>
-                  setSupplier(
-                    e.target.value
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                placeholder="Optional"
-              />
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Calculated Cost</p>
+              <p className="mt-1 text-xl font-semibold">₱{previewCost.toFixed(2)} / {UNIT_OPTIONS.find((item) => item.value === unit)?.shortLabel ?? unit}</p>
             </div>
-
-
-
-            
           </div>
 
-        
-
-          {/* MATERIAL ROLES */}
-<div className="sm:col-span-2">
-
-  <div className="rounded-xl border border-zinc-200 bg-white p-5">
-    <h3 className="font-semibold text-zinc-900">
-      Used As
-    </h3>
-
-    <p className="mt-1 text-sm text-zinc-500">
-      Select where this material can be used in a bag.
-      A material can have more than one role.
-    </p>
-
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      {MATERIAL_ROLE_OPTIONS.map((role) => (
-        <label
-          key={role.value}
-          className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:bg-zinc-50"
-        >
-          <input
-            type="checkbox"
-            checked={materialRoles.includes(
-              role.value
-            )}
-            onChange={(e) => {
-              if (e.target.checked) {
-                setMaterialRoles((current) => [
-                  ...current,
-                  role.value,
-                ]);
-              } else {
-                setMaterialRoles((current) =>
-                  current.filter(
-                    (value) =>
-                      value !== role.value
-                  )
-                );
-              }
-            }}
-            className="h-4 w-4"
-          />
-
-          <span className="text-sm font-medium text-zinc-800">
-            {role.label}
-          </span>
-        </label>
-      ))}
-    </div>
-  </div>
-</div>
-
-          {/* ACTIONS */}
-          <div className="mt-5 flex gap-2">
-            <button
-              onClick={handleSave}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-white shadow-sm hover:bg-zinc-800"
-            >
-              {editingId
-                ? "Update"
-                : "Add"}{" "}
-              Material
-            </button>
-
-            <button
-              onClick={resetForm}
-              className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-700 hover:bg-zinc-100"
-            >
-              Cancel
-            </button>
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={handleSave} disabled={saving} className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:opacity-50">{saving ? "Saving..." : editingId ? "Update Material" : "Add Material"}</button>
+            {editingId && <button type="button" onClick={resetForm} className="rounded-lg border border-zinc-300 bg-white px-5 py-3 font-medium">Cancel</button>}
           </div>
-        </div>
-      )}
+        </section>
 
-      {/* ADD BUTTON */}
-      {!isAdding && (
-        <button
-          onClick={() =>
-            setIsAdding(true)
-          }
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-white shadow-sm hover:bg-zinc-800"
-        >
-          + Add Material
-        </button>
-      )}
-
-      {/* MATERIAL TABLE */}
-      {loading ? (
-        <p className="text-zinc-600">
-          Loading materials...
-        </p>
-      ) : materials.length === 0 ? (
-        <p className="text-zinc-600">
-          No materials yet. Add one to get
-          started.
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <table className="w-full bg-white">
-            <thead className="bg-zinc-100/80">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
-                  Name
-                </th>
-
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
-                  Unit
-                </th>
-
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
-                  Cost
-                </th>
-
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
-                  Purchase
-                </th>
-
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
-                  Supplier
-                </th>
-                
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
-                    Used As
-                </th>
-
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {materials.map(
-                (material) => (
-                  <tr
-  key={material.id}
-  className="border-t border-zinc-200 bg-white hover:bg-zinc-50/70"
->
-  <td className="px-4 py-3 text-sm text-zinc-900">
-    {material.name}
-  </td>
-
-  <td className="px-4 py-3 text-sm text-zinc-600">
-    {
-      getUnitInfo(
-        material.unit
-      ).label
-    }
-  </td>
-
-  <td className="px-4 py-3 text-sm text-zinc-900">
-    ₱
-    {material.cost_per_unit.toFixed(
-      2
-    )}{" "}
-    /{" "}
-    {
-      getUnitInfo(
-        material.unit
-      ).shortLabel
-    }
-  </td>
-
-  <td className="px-4 py-3 text-sm text-zinc-600">
-    {material.unit ===
-      "m²" &&
-    material.purchase_length_m &&
-    material.purchase_width_m &&
-    material.purchase_price ? (
-      <>
-        {
-          material.purchase_length_m
-        }
-        m ×{" "}
-        {
-          material.purchase_width_m
-        }
-        m
-        <br />
-        ₱
-        {material.purchase_price.toFixed(
-          2
-        )}
-      </>
-    ) : material.purchase_quantity &&
-      material.purchase_unit_amount &&
-      material.purchase_price ? (
-      <>
-        {
-          material.purchase_quantity
-        }{" "}
-        purchase unit
-        {material.purchase_quantity !==
-        1
-          ? "s"
-          : ""}{" "}
-        ×{" "}
-        {
-          material.purchase_unit_amount
-        }{" "}
-        {
-          getUnitInfo(
-            material.unit
-          ).shortLabel
-        }
-        <br />
-        ₱
-        {material.purchase_price.toFixed(
-          2
-        )}
-      </>
-    ) : (
-      "—"
-    )}
-  </td>
-
-  <td className="px-4 py-3 text-sm text-zinc-600">
-    {material.supplier ||
-      "—"}
-  </td>
-
-  {/* NEW: USED AS */}
-  <td className="px-4 py-3 text-sm text-zinc-600">
-    {material.material_roles &&
-    material.material_roles.length > 0 ? (
-      <div className="flex flex-wrap gap-1">
-        {material.material_roles.map(
-          (role) => {
-            const roleInfo =
-              MATERIAL_ROLE_OPTIONS.find(
-                (option) =>
-                  option.value === role
-              );
-
-            return (
-              <span
-                key={role}
-                className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700"
-              >
-                {roleInfo?.label ||
-                  role}
-              </span>
-            );
-          }
-        )}
+        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <div className="border-b border-zinc-200 px-6 py-4"><h2 className="font-semibold">Material Catalog</h2></div>
+          {loading ? <p className="p-6 text-sm text-zinc-500">Loading materials...</p> : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 text-zinc-600"><tr><th className="px-5 py-3">Material</th><th className="px-5 py-3">Type</th><th className="px-5 py-3">Allowed Uses</th><th className="px-5 py-3">Unit</th><th className="px-5 py-3">Cost / Unit</th><th className="px-5 py-3">Supplier</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {materials.map((material) => (
+                    <tr key={material.id}>
+                      <td className="px-5 py-4 font-medium">{material.name}</td>
+                      <td className="px-5 py-4">{material.material_type || "—"}</td>
+                      <td className="px-5 py-4 text-xs text-zinc-500">{material.allowed_uses.length > 0 ? material.allowed_uses.map((use) => ALLOWED_USE_OPTIONS.find((option) => option.value === use)?.label || use).join(", ") : "Additional only"}</td>
+                      <td className="px-5 py-4">{material.unit}</td>
+                      <td className="px-5 py-4">₱{Number(material.cost_per_unit).toFixed(2)}</td>
+                      <td className="px-5 py-4">{material.supplier || "—"}</td>
+                      <td className="px-5 py-4"><div className="flex justify-end gap-2"><button onClick={() => startEdit(material)} className="rounded-md border px-3 py-1.5">Edit</button><button onClick={() => handleDelete(material.id)} className="rounded-md border px-3 py-1.5 text-red-600">Delete</button></div></td>
+                    </tr>
+                  ))}
+                  {materials.length === 0 && <tr><td colSpan={7} className="px-5 py-8 text-center text-zinc-500">No materials yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
-    ) : (
-      "—"
-    )}
-  </td>
-
-  {/* ACTIONS */}
-  <td className="px-4 py-3 text-sm">
-    <button
-      onClick={() =>
-        handleEdit(
-          material
-        )
-      }
-      className="mr-2 text-blue-600 hover:underline"
-    >
-      Edit
-    </button>
-
-    <button
-      onClick={() =>
-        handleDelete(
-          material.id
-        )
-      }
-      className="text-red-600 hover:underline"
-    >
-      Delete
-    </button>
-  </td>
-</tr>
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

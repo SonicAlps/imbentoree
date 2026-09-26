@@ -49,6 +49,8 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     async function fetchOrder() {
+      setIsLoading(true);
+
       const { data, error } = await supabase
         .from("orders")
         .select("*")
@@ -63,7 +65,6 @@ export default function OrderDetailPage() {
 
       setOrder(data as Order);
 
-      // Fetch status history
       const { data: historyData, error: historyError } = await supabase
         .from("order_status_history")
         .select("*")
@@ -76,8 +77,7 @@ export default function OrderDetailPage() {
           historyError.message
         );
       } else {
-        console.log("ORDER HISTORY:", historyData);
-        setStatusHistory(historyData as StatusHistory[]);
+        setStatusHistory((historyData ?? []) as StatusHistory[]);
       }
 
       setIsLoading(false);
@@ -104,14 +104,24 @@ export default function OrderDetailPage() {
       ...order,
       status: newStatus,
     });
+
+    // Re-fetch history so the timeline reflects any database trigger
+    // that records status changes.
+    const { data: historyData } = await supabase
+      .from("order_status_history")
+      .select("*")
+      .eq("order_id", order.id)
+      .order("created_at", { ascending: false });
+
+    if (historyData) {
+      setStatusHistory(historyData as StatusHistory[]);
+    }
   }
 
   if (isLoading) {
     return (
       <div className="mx-auto max-w-7xl p-8">
-        <p className="text-sm text-zinc-500">
-          Loading order...
-        </p>
+        <p className="text-sm text-zinc-500">Loading order...</p>
       </div>
     );
   }
@@ -119,13 +129,14 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <div className="mx-auto max-w-5xl p-8">
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-xl font-semibold text-white">
           Order not found
         </h1>
 
         <button
+          type="button"
           onClick={() => router.push("/orders")}
-          className="mt-4 text-sm underline"
+          className="mt-4 text-sm text-zinc-400 underline hover:text-white"
         >
           Back to Orders
         </button>
@@ -135,11 +146,10 @@ export default function OrderDetailPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-
       {/* HEADER */}
       <div className="mb-10">
-
         <button
+          type="button"
           onClick={() => router.push("/orders")}
           className="mb-6 text-sm text-zinc-400 transition hover:text-white"
         >
@@ -147,9 +157,7 @@ export default function OrderDetailPage() {
         </button>
 
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-
           <div>
-
             <p className="font-mono text-sm font-medium tracking-wide text-zinc-400">
               {order.order_number}
             </p>
@@ -161,40 +169,43 @@ export default function OrderDetailPage() {
             <p className="mt-2 text-zinc-400">
               {order.customer_name}
             </p>
-
           </div>
 
-          <button
-            onClick={() =>
-              router.push(`/orders/${order.order_number}/edit`)
-            }
-            className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
-          >
-            Edit Order
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                router.push(`/liquidation/${order.order_number}`)
+              }
+              className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700"
+            >
+              Liquidate Bag
+            </button>
 
+            <button
+              type="button"
+              onClick={() =>
+                router.push(`/orders/${order.order_number}/edit`)
+              }
+              className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200"
+            >
+              Edit Order
+            </button>
+          </div>
         </div>
-
       </div>
-
 
       {/* PAGE CONTENT */}
       <div className="space-y-8">
-
-
         {/* CURRENT STATUS */}
         <section className="rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
-
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-
             <div>
-
               <p className="text-xs font-medium uppercase tracking-[0.15em] text-zinc-500">
                 Current Status
               </p>
 
               <div className="mt-3">
-
                 <span
                   className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                     STATUS_STYLES[order.status] ??
@@ -203,15 +214,11 @@ export default function OrderDetailPage() {
                 >
                   {order.status.replace("_", " ")}
                 </span>
-
               </div>
-
             </div>
-
 
             {/* STATUS ACTIONS */}
             <div className="flex flex-wrap gap-2">
-
               {order.status === "confirmed" && (
                 <button
                   type="button"
@@ -231,33 +238,22 @@ export default function OrderDetailPage() {
                   Mark Completed
                 </button>
               )}
-
             </div>
-
           </div>
-
         </section>
-
 
         {/* INFORMATION + PRODUCTION */}
         <div className="w-full">
-
           <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1.8fr)_minmax(360px,0.9fr)]">
-
-
             {/* LEFT — ORDER INFORMATION */}
             <section className="min-w-0 rounded-2xl border bg-white p-8">
-
-
               {/* CUSTOMER */}
               <div>
-
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
                   Customer
                 </p>
 
                 <div className="mt-4">
-
                   <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">
                     {order.customer_name}
                   </h2>
@@ -265,107 +261,90 @@ export default function OrderDetailPage() {
                   <p className="mt-1 text-sm text-zinc-500">
                     {order.email}
                   </p>
-
                 </div>
-
               </div>
 
-
-              {/* DIVIDER */}
               <div className="my-8 border-t" />
-
 
               {/* BAG CONFIGURATION */}
               <div>
-
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
                   Bag Configuration
                 </p>
 
                 <div className="mt-5 divide-y">
-
-                  <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center justify-between gap-4 py-3">
                     <span className="text-sm text-zinc-500">
                       Outer Fabric
                     </span>
 
-                    <span className="text-sm font-medium text-zinc-900">
-                      {order.outer_fabric}
+                    <span className="text-right text-sm font-medium text-zinc-900">
+                      {order.outer_fabric || "—"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center justify-between gap-4 py-3">
                     <span className="text-sm text-zinc-500">
                       Inner Fabric
                     </span>
 
-                    <span className="text-sm font-medium text-zinc-900">
-                      {order.inner_fabric}
+                    <span className="text-right text-sm font-medium text-zinc-900">
+                      {order.inner_fabric || "—"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center justify-between gap-4 py-3">
                     <span className="text-sm text-zinc-500">
                       Strap
                     </span>
 
-                    <span className="text-sm font-medium text-zinc-900">
+                    <span className="text-right text-sm font-medium text-zinc-900">
                       {order.strap_size ?? "—"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center justify-between gap-4 py-3">
                     <span className="text-sm text-zinc-500">
                       Strap Color
                     </span>
 
-                    <span className="text-sm font-medium text-zinc-900">
+                    <span className="text-right text-sm font-medium text-zinc-900">
                       {order.strap_color ?? "—"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center justify-between gap-4 py-3">
                     <span className="text-sm text-zinc-500">
                       Mounting
                     </span>
 
-                    <span className="text-sm font-medium text-zinc-900">
+                    <span className="text-right text-sm font-medium text-zinc-900">
                       {order.mounting_type ?? "—"}
                     </span>
                   </div>
-
                 </div>
-
               </div>
 
-
-              {/* DIVIDER */}
               <div className="my-8 border-t" />
-
 
               {/* ORDER DETAILS */}
               <div>
-
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
                   Order Details
                 </p>
 
                 <div className="mt-5 space-y-4">
-
-                  <div className="flex items-center justify-between">
-
+                  <div className="flex items-center justify-between gap-4">
                     <span className="text-sm text-zinc-500">
                       Order Value
                     </span>
 
                     <span className="text-xl font-semibold tracking-tight text-zinc-900">
-                      ₱{order.price.toFixed(2)}
+                      ₱{Number(order.price ?? 0).toFixed(2)}
                     </span>
-
                   </div>
 
-                  <div className="flex items-center justify-between">
-
+                  <div className="flex items-center justify-between gap-4">
                     <span className="text-sm text-zinc-500">
                       Order Number
                     </span>
@@ -373,101 +352,104 @@ export default function OrderDetailPage() {
                     <span className="font-mono text-sm font-medium text-zinc-900">
                       {order.order_number}
                     </span>
-
                   </div>
 
-                  <div className="flex items-center justify-between">
-
+                  <div className="flex items-center justify-between gap-4">
                     <span className="text-sm text-zinc-500">
                       Created
                     </span>
 
                     <span className="text-sm text-zinc-900">
-                      {new Date(order.created_at).toLocaleDateString()}
+                      {new Date(order.created_at).toLocaleDateString(
+                        "en-PH",
+                        {
+                          timeZone: "Asia/Manila",
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        }
+                      )}
                     </span>
-
                   </div>
-
                 </div>
-
               </div>
-
             </section>
 
-
             {/* RIGHT — PRODUCTION */}
-<div className="min-w-0 space-y-8">
-  {/* Photo Display */}
-  <OrderPhotoDisplay orderId={order.id} />
+            <div className="min-w-0 space-y-8">
+              {/* PHOTO DISPLAY */}
+              <OrderPhotoDisplay orderId={order.id} />
 
-  {/* Photo Upload */}
-  <PhotoUpload
-    orderId={order.id}
-    orderNumber={order.order_number}
-    onPhotoAdded={() => {
-      // Optionally refresh data here
-      window.location.reload();
-    }}
-  />
+              {/* PHOTO UPLOAD */}
+              <PhotoUpload
+                orderId={order.id}
+                orderNumber={order.order_number}
+                onPhotoAdded={() => {
+                  window.location.reload();
+                }}
+              />
 
-  {/* Timeline */}
-  <section className="rounded-2xl border bg-white p-8">
-    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
-      Production
-    </p>
+              {/* TIMELINE */}
+              <section className="rounded-2xl border bg-white p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
+                  Production
+                </p>
 
-    <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">
-      Order Timeline
-    </h2>
+                <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">
+                  Order Timeline
+                </h2>
 
-    <div className="mt-8 space-y-6">
-      {statusHistory.length === 0 ? (
-        <p className="text-sm text-zinc-400">
-          No status history yet.
-        </p>
-      ) : (
-        statusHistory.map((history, index) => (
-          <div key={history.id} className="flex gap-4">
-            <div className="flex flex-col items-center">
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                  index === 0
-                    ? "bg-zinc-900 text-white"
-                    : "bg-zinc-100 text-zinc-500"
-                }`}
-              >
-                {index === 0 ? "✓" : "•"}
-              </div>
+                <div className="mt-8 space-y-6">
+                  {statusHistory.length === 0 ? (
+                    <p className="text-sm text-zinc-400">
+                      No status history yet.
+                    </p>
+                  ) : (
+                    statusHistory.map((history, index) => (
+                      <div
+                        key={history.id}
+                        className="flex gap-4"
+                      >
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                              index === 0
+                                ? "bg-zinc-900 text-white"
+                                : "bg-zinc-100 text-zinc-500"
+                            }`}
+                          >
+                            {index === 0 ? "✓" : "•"}
+                          </div>
 
-              {index !== statusHistory.length - 1 && (
-                <div className="mt-2 h-full w-px bg-zinc-200" />
-              )}
-            </div>
+                          {index !== statusHistory.length - 1 && (
+                            <div className="mt-2 h-full w-px bg-zinc-200" />
+                          )}
+                        </div>
 
-            <div className="pb-2">
-              <p className="font-medium capitalize text-zinc-900">
-                {history.status.replace("_", " ")}
-              </p>
+                        <div className="pb-2">
+                          <p className="font-medium capitalize text-zinc-900">
+                            {history.status.replace("_", " ")}
+                          </p>
 
-              <p className="mt-1 text-xs text-zinc-400">
-                {new Date(history.created_at).toLocaleString()}
-              </p>
+                          <p className="mt-1 text-xs text-zinc-400">
+                            {new Date(
+                              history.created_at
+                            ).toLocaleString("en-PH", {
+                              timeZone: "Asia/Manila",
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
             </div>
           </div>
-        ))
-      )}
-    </div>
-  </section>
-</div>
-
-
-          </div>
-
         </div>
-
-
       </div>
-
     </div>
   );
 }

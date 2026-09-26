@@ -12,11 +12,21 @@ export function Navbar() {
   const navLinks = [
     { name: "Dashboard", href: "/" },
     { name: "Orders", href: "/orders" },
+    { name: "Materials", href: "/materials" },
+    { name: "Product Costs", href: "/product-costs" },
   ];
 
   async function handleLogout() {
     await supabase.auth.signOut();
     router.push("/login");
+  }
+
+  function isActiveLink(href: string) {
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   if (pathname === "/login") {
@@ -26,82 +36,123 @@ export function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 md:px-6 py-3 md:py-4">
-          
-          {/* LOGO & BRANDING */}
-          <Link href="/" className="flex items-center gap-2 md:gap-3 group flex-shrink-0">
-            <Image
-              src="/logo.png"
-              alt="Imbentoree Logo"
-              width={60}
-              height={60}
-              className="md:w-20 md:h-20 w-14 h-14 rounded-md object-contain"
-              priority
-            />
-            <div className="hidden md:block">
-              <h1 className="text-xl font-bold tracking-tight text-zinc-900 group-hover:text-zinc-700 transition">
-                Imbentoree
-              </h1>
-              <p className="text-xs text-zinc-500">by imbento Bags</p>
-            </div>
-          </Link>
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
+          {/* LEFT SIDE */}
+          <div className="flex items-center gap-8">
+            {/* LOGO */}
+            <Link
+              href="/"
+              className="group flex flex-shrink-0 items-center gap-3"
+            >
+              <Image
+                src="/logo.png"
+                alt="Imbentoree Logo"
+                width={56}
+                height={56}
+                className="h-12 w-12 rounded-md object-contain md:h-14 md:w-14"
+                priority
+              />
 
-          {/* NAVIGATION LINKS - Hidden on mobile */}
-          <nav className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`text-sm font-medium transition ${
-                    isActive
-                      ? "text-zinc-900 font-semibold underline underline-offset-4 decoration-2"
-                      : "text-zinc-600 hover:text-zinc-900"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              );
-            })}
-          </nav>
+              <div className="hidden lg:block">
+                <h1 className="text-lg font-bold tracking-tight text-zinc-900 transition group-hover:text-zinc-700">
+                  Imbentoree
+                </h1>
 
-          {/* BUTTONS & INFO */}
-          <div className="flex items-center gap-2 md:gap-3">
-            {/* Version - Hidden on mobile */}
-            <span className="hidden md:inline font-mono text-xs text-zinc-400">
-              V1.5
+                <p className="text-[11px] text-zinc-400">
+                  by Imbento Bags
+                </p>
+              </div>
+            </Link>
+
+            {/* DESKTOP NAVIGATION */}
+            <nav className="hidden items-center gap-1 md:flex">
+              {navLinks.map((link) => {
+                const isActive = isActiveLink(link.href);
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-zinc-100 text-zinc-950"
+                        : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* RIGHT SIDE */}
+          <div className="flex items-center gap-2">
+            {/* VERSION */}
+            <span className="hidden font-mono text-xs text-zinc-400 xl:inline">
+              V2
             </span>
 
-            {/* New Order Button */}
+            {/* NEW ORDER */}
             <Link
               href="/new-order"
-              className="rounded-lg bg-red-300 px-3 md:px-4 py-2 text-xs md:text-sm font-medium text-red-900 hover:bg-red-400 transition whitespace-nowrap"
+              className="whitespace-nowrap rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700"
             >
               + New Order
             </Link>
 
-            {/* Logout Button - Hidden on mobile, show as icon */}
+            {/* DESKTOP LOGOUT */}
             <button
               onClick={handleLogout}
-              className="hidden md:block rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition"
+              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-zinc-500 transition hover:bg-red-50 hover:text-red-700 md:block"
             >
               Logout
             </button>
 
-            {/* Mobile Logout Icon */}
+            {/* MOBILE LOGOUT */}
             <button
               onClick={handleLogout}
-              className="md:hidden text-red-700 hover:text-red-900 transition"
+              className="rounded-lg p-2 text-zinc-500 transition hover:bg-red-50 hover:text-red-700 md:hidden"
               title="Logout"
+              aria-label="Logout"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
               </svg>
             </button>
           </div>
-
         </div>
+
+        {/* MOBILE NAVIGATION */}
+        <nav className="flex overflow-x-auto border-t border-zinc-100 px-4 md:hidden">
+          {navLinks.map((link) => {
+            const isActive = isActiveLink(link.href);
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`whitespace-nowrap border-b-2 px-3 py-3 text-xs font-medium transition ${
+                  isActive
+                    ? "border-zinc-900 text-zinc-900"
+                    : "border-transparent text-zinc-500"
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
+        </nav>
       </header>
 
       {/* STITCH DIVIDER */}
