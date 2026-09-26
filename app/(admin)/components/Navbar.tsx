@@ -10,9 +10,10 @@ export function Navbar() {
   const router = useRouter();
 
   const navLinks = [
-    { name: "Dashboard", href: "/" },
-    { name: "Orders", href: "/orders" },
-  ];
+  { name: "Dashboard", href: "/" },
+  { name: "Orders", href: "/orders" },
+  { name: "Waitlist", href: "/admin/waitlist" },
+];
 
   async function handleLogout() {
     await supabase.auth.signOut();
