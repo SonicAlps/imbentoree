@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
         },
 
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
 
@@ -43,17 +43,31 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // ← ADD THIS: Allow public access to tracker
-  if (pathname.startsWith("/track/")) {
+  // PUBLIC CUSTOMER PAGES
+  const isPublicPage =
+    pathname === "/waitlist" ||
+    pathname.startsWith("/track/");
+
+  if (isPublicPage) {
     return response;
   }
 
-  if (!user && pathname !== "/login") {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // LOGIN PAGE
+  if (pathname === "/login") {
+    if (user) {
+      return NextResponse.redirect(
+        new URL("/orders", request.url)
+      );
+    }
+
+    return response;
   }
 
-  if (user && pathname === "/login") {
-    return NextResponse.redirect(new URL("/orders", request.url));
+  // EVERYTHING ELSE REQUIRES LOGIN
+  if (!user) {
+    return NextResponse.redirect(
+      new URL("/login", request.url)
+    );
   }
 
   return response;
