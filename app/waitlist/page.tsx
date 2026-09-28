@@ -130,21 +130,29 @@ export default function WaitlistPage() {
 async function fetchPreorderCount() {
   setCountLoading(true);
 
-  const { count, error } = await supabase
-    .from("waitlist")
-    .select("*", {
-      count: "exact",
-      head: true,
-    });
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_waitlist_count"
+    );
 
-  if (error) {
-    console.error("PRE-ORDER COUNT ERROR:", error);
+    if (error) {
+      console.error(
+        "PRE-ORDER COUNT ERROR:",
+        error
+      );
+
+      return;
+    }
+
+    setPreorderCount(data ?? 0);
+  } catch (error) {
+    console.error(
+      "PRE-ORDER COUNT ERROR:",
+      error
+    );
+  } finally {
     setCountLoading(false);
-    return;
   }
-
-  setPreorderCount(count ?? 0);
-  setCountLoading(false);
 }
 
 

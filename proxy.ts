@@ -5,16 +5,14 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   /*
-   * PUBLIC CUSTOMER PAGES
-   *
-   * These pages do not require authentication,
-   * so return immediately before talking to Supabase Auth.
+   * PUBLIC CUSTOMER PAGES + PUBLIC CUSTOMER API
    */
-  const isPublicPage =
+  const isPublicRoute =
     pathname === "/waitlist" ||
-    pathname.startsWith("/track/");
+    pathname.startsWith("/track/") ||
+    pathname.startsWith("/api/waitlist/");
 
-  if (isPublicPage) {
+  if (isPublicRoute) {
     return NextResponse.next();
   }
 
