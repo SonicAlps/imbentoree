@@ -19,6 +19,19 @@ const BAG_OPTIONS = [
 
 const SLIDES = [
   {
+    src: "/traffic-handbag-handmade.webp",
+    alt: "Traffic Handbag handmade in the Philippines",
+  },
+   {
+    src: "/traffic-handbag-essentialdimension.webp",
+    alt: "Traffic Handbag Essential Dimension",
+  },
+  {
+    src: "/traffic-handbag-colors.webp",
+    alt: "Traffic Handbag mix and match colors",
+  },
+  
+   {
     src: "/traffic-handbag-hero.webp",
     alt: "Traffic Handbag campaign poster",
   },
