@@ -180,25 +180,39 @@ async function fetchPreorderCount() {
     setLoading(false);
 
     if (insertError) {
-      console.error(
-        "WAITLIST INSERT ERROR:",
-        insertError
-      );
+  console.error(
+    "WAITLIST INSERT ERROR:",
+    insertError
+  );
 
-      if (insertError.code === "23505") {
-        setError(
-          "You've already pre-ordered this colorway."
-        );
+  if (
+    insertError.message?.includes(
+      "PREORDER_LIMIT_REACHED"
+    )
+  ) {
+    setPreorderCount(PREORDER_LIMIT);
 
-        return;
-      }
+    setError(
+      "The first batch of 15 Traffic Handbags is fully reserved."
+    );
 
-      setError(
-        "We couldn't submit your pre-order. Please try again."
-      );
+    return;
+  }
 
-      return;
-    }
+  if (insertError.code === "23505") {
+    setError(
+      "You've already pre-ordered this colorway."
+    );
+
+    return;
+  }
+
+  setError(
+    "We couldn't submit your pre-order. Please try again."
+  );
+
+  return;
+}
 
     setName(cleanName);
     setEmail(cleanEmail);
