@@ -44,6 +44,8 @@ const SLIDES = [
   },
 ];
 
+const PREORDER_LIMIT = 15;
+
 export default function WaitlistPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -52,6 +54,9 @@ export default function WaitlistPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+
+  const [preorderCount, setPreorderCount] = useState(0);
+  const [countLoading, setCountLoading] = useState(true);
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -64,6 +69,10 @@ export default function WaitlistPage() {
 
     return () => clearTimeout(timer);
   }, [currentSlide]);
+
+  useEffect(() => {
+  fetchPreorderCount();
+}, []);
 
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
@@ -117,6 +126,29 @@ export default function WaitlistPage() {
     touchStartX.current = null;
     touchEndX.current = null;
   }
+
+async function fetchPreorderCount() {
+  setCountLoading(true);
+
+  const { count, error } = await supabase
+    .from("waitlist")
+    .select("*", {
+      count: "exact",
+      head: true,
+    });
+
+  if (error) {
+    console.error("PRE-ORDER COUNT ERROR:", error);
+    setCountLoading(false);
+    return;
+  }
+
+  setPreorderCount(count ?? 0);
+  setCountLoading(false);
+}
+
+
+
 
   async function handleSubmit(
     e: FormEvent<HTMLFormElement>
@@ -172,6 +204,35 @@ export default function WaitlistPage() {
     setEmail(cleanEmail);
     setSubmitted(true);
   }
+
+const remainingSlots = Math.max(
+  PREORDER_LIMIT - preorderCount,
+  0
+);
+
+const availabilityColor =
+  remainingSlots === 0
+    ? "text-red-400"
+    : remainingSlots === 1
+    ? "text-red-400"
+    : remainingSlots <= 3
+    ? "text-amber-400"
+    : "text-green-400";
+
+const progressColor =
+  remainingSlots === 0
+    ? "bg-red-500"
+    : remainingSlots === 1
+    ? "bg-red-500"
+    : remainingSlots <= 3
+    ? "bg-amber-400"
+    : "bg-green-400";
+
+
+
+const preorderFull = remainingSlots === 0;
+
+
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -364,6 +425,64 @@ export default function WaitlistPage() {
                     ₱1,999
                   </p>
                 </div>
+
+                {/* PRE-ORDER COUNTDOWN */}
+<div className="mb-8 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+
+  <div className="flex items-end justify-between gap-4">
+
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">
+        Limited First Batch
+      </p>
+
+      <p className="mt-2 text-sm text-white/50">
+        Pre-order availability
+      </p>
+    </div>
+
+    <div className="text-right">
+      {countLoading ? (
+        <p className="text-sm text-white/40">
+          Checking...
+        </p>
+      ) : (
+        <>
+          <p className={`text-4xl font-black tracking-tight ${availabilityColor}`}>
+            {remainingSlots}
+          </p>
+
+          <p className="mt-1 text-xs text-white/40">
+            of {PREORDER_LIMIT} spots left
+          </p>
+        </>
+      )}
+    </div>
+
+  </div>
+
+  {!countLoading && (
+    <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+      <div
+        className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
+        style={{
+          width: `${
+            (remainingSlots / PREORDER_LIMIT) * 100
+          }%`,
+        }}
+      />
+    </div>
+  )}
+
+  {!countLoading && preorderFull && (
+    <p className="mt-4 text-sm font-semibold text-red-300">
+      The first batch is fully reserved.
+    </p>
+  )}
+
+</div>
+
+                
 
                 {/* FORM */}
                 <form
