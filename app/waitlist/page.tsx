@@ -22,7 +22,7 @@ const SLIDES = [
     src: "/traffic-handbag-handmade.webp",
     alt: "Traffic Handbag handmade in the Philippines",
   },
-   {
+  {
     src: "/traffic-handbag-essentialdimension.webp",
     alt: "Traffic Handbag Essential Dimension",
   },
@@ -30,8 +30,7 @@ const SLIDES = [
     src: "/traffic-handbag-colors.webp",
     alt: "Traffic Handbag mix and match colors",
   },
-  
-   {
+  {
     src: "/traffic-handbag-hero.webp",
     alt: "Traffic Handbag campaign poster",
   },
@@ -57,14 +56,14 @@ export default function WaitlistPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-  const timer = setTimeout(() => {
-    setCurrentSlide((current) =>
-      current === SLIDES.length - 1 ? 0 : current + 1
-    );
-  }, 5000);
+    const timer = setTimeout(() => {
+      setCurrentSlide((current) =>
+        current === SLIDES.length - 1 ? 0 : current + 1
+      );
+    }, 5000);
 
-  return () => clearTimeout(timer);
-}, [currentSlide]);
+    return () => clearTimeout(timer);
+  }, [currentSlide]);
 
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
@@ -156,14 +155,14 @@ export default function WaitlistPage() {
 
       if (insertError.code === "23505") {
         setError(
-          "You're already on the waitlist for this colorway."
+          "You've already pre-ordered this colorway."
         );
 
         return;
       }
 
       setError(
-        "We couldn't add you to the waitlist. Please try again."
+        "We couldn't submit your pre-order. Please try again."
       );
 
       return;
@@ -196,26 +195,25 @@ export default function WaitlistPage() {
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-                <div
-  key={currentSlide}
-  className="carousel-image-enter"
->
-              <Image
-                src={SLIDES[currentSlide].src}
-                alt={SLIDES[currentSlide].alt}
-                width={1080}
-                height={1350}
-                priority={currentSlide === 0}
-                draggable={false}
-                className="
-                  h-auto
-                  w-full
-                  max-h-[68vh]
-                  object-cover
-                  lg:max-h-none
-                "
-              />
-
+              <div
+                key={currentSlide}
+                className="carousel-image-enter"
+              >
+                <Image
+                  src={SLIDES[currentSlide].src}
+                  alt={SLIDES[currentSlide].alt}
+                  width={1080}
+                  height={1350}
+                  priority={currentSlide === 0}
+                  draggable={false}
+                  className="
+                    h-auto
+                    w-full
+                    max-h-[68vh]
+                    object-cover
+                    lg:max-h-none
+                  "
+                />
               </div>
 
               {/* PREVIOUS */}
@@ -341,12 +339,12 @@ export default function WaitlistPage() {
                 {/* INTRO */}
                 <div className="mb-8 text-center">
                   <h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
-                    Join the waitlist.
+                    Pre-order the Traffic Handbag.
                   </h1>
 
                   <p className="mt-4 text-sm leading-6 text-white/60 sm:mt-5 sm:text-base sm:leading-7">
-                    Take the Traffic Handbag beyond the city.
-                    Choose your color and bring only what matters on your next outdoor escape.
+                    Choose your colorway and reserve your Traffic Handbag.
+                    We&apos;ll contact you with payment and production details.
                   </p>
                 </div>
 
@@ -539,16 +537,15 @@ export default function WaitlistPage() {
                     "
                   >
                     {loading
-                      ? "Joining..."
-                      : "Join the Waitlist →"}
+                      ? "Submitting..."
+                      : "Pre-Order →"}
                   </button>
 
                   {/* CONSENT */}
                   <p className="text-center text-xs leading-5 text-white/40">
-                    By joining the waitlist, you agree to
-                    receive emails about Traffic Handbag
-                    availability and purchasing. No payment
-                    is required.
+                    No payment is required yet. Your pre-order reserves
+                    your selected Traffic Handbag colorway. We&apos;ll
+                    contact you with payment and production details.
                   </p>
 
                 </form>
@@ -575,7 +572,7 @@ export default function WaitlistPage() {
 
                       <div className="mt-4 text-center">
                         <span className="inline-flex rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                          Waitlist confirmed
+                          Pre-order received
                         </span>
                       </div>
 
@@ -585,7 +582,7 @@ export default function WaitlistPage() {
                     <div className="p-6 text-center sm:p-8">
 
                       <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                        You're on the list.
+                        Your pre-order is in.
                       </h1>
 
                       <p className="mt-5 break-words text-sm leading-6 text-white/60 sm:text-base sm:leading-7">
@@ -593,12 +590,15 @@ export default function WaitlistPage() {
                         <strong className="font-semibold text-white">
                           {name}
                         </strong>
-                        . We'll email you at{" "}
+                        . We&apos;ve received your pre-order for the{" "}
+                        <strong className="font-semibold text-white">
+                          {bagChoice}
+                        </strong>{" "}
+                        Traffic Handbag. We&apos;ll email you at{" "}
                         <strong className="font-semibold text-white">
                           {email}
                         </strong>{" "}
-                        with purchase details once your
-                        selected colorway becomes available.
+                        with payment and production details.
                       </p>
 
                       {/* COLORWAY */}
@@ -618,7 +618,9 @@ export default function WaitlistPage() {
                       <div className="mt-7 border-t border-white/10 pt-6">
 
                         <p className="text-xs leading-5 text-white/35 sm:text-sm sm:leading-6">
-                          We’ll send you a confirmation email once the waitlist is complete. Thank you!
+                          No payment has been made yet. We&apos;ll contact
+                          you once your Traffic Handbag is ready for the
+                          next step. Thank you!
                         </p>
 
                       </div>
