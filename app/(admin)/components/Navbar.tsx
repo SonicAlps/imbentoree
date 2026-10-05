@@ -10,9 +10,34 @@ export function Navbar() {
   const router = useRouter();
 
   const navLinks = [
-  { name: "Dashboard", href: "/" },
-  { name: "Orders", href: "/orders" },
-  { name: "Waitlist", href: "/admin/waitlist" },
+  {
+    name: "Dashboard",
+    href: "/",
+  },
+  {
+    name: "Orders",
+    href: "/orders",
+  },
+  {
+    name: "Products",
+    href: "/products",
+  },
+  {
+    name: "Materials",
+    href: "/materials",
+  },
+  {
+    name: "Cost History",
+    href: "/cost-history",
+  },
+  {
+    name: "Finances",
+    href: "/finances",
+  },
+  {
+    name: "Waitlist",
+    href: "/admin/waitlist",
+  },
 ];
 
   async function handleLogout() {

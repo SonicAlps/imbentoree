@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/src/lib/supabase";
+import { FinanceSummary } from "@/src/components/FinanceSummary";
+
 
 import {
   BarChart,
@@ -688,6 +690,15 @@ export default function Home() {
             </div>
           )}
         </div>
+
+             {/* FINANCE SUMMARY */}
+        <div className="mt-6">
+          <FinanceSummary />
+          </div>
+
+
+
+
 
         {/* PRODUCTS SOLD */}
         <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
