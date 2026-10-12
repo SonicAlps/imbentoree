@@ -494,12 +494,6 @@ const [active, setActive] = useState(true);
 
           <div>
 
-            <p className="text-sm font-medium text-zinc-500">
-
-              Imbentoree
-
-            </p>
-
 
 
             <h1 className="mt-1 text-4xl font-bold tracking-tight text-black">

@@ -1,779 +1,1557 @@
 "use client";
 
+
+
 import { useEffect, useState } from "react";
+
 import Link from "next/link";
+
 import { supabase } from "@/src/lib/supabase";
+
 import { FinanceSummary } from "@/src/components/FinanceSummary";
 
 
+
+
+
 import {
+
   BarChart,
+
   Bar,
+
   XAxis,
+
   YAxis,
+
   CartesianGrid,
+
   Tooltip,
+
   ResponsiveContainer,
+
 } from "recharts";
 
+
+
 type ProductCount = {
+
   product: string;
+
   count: number;
+
 };
+
+
 
 type Order = {
+
   id: string;
+
   order_number: string;
+
   customer_name: string;
+
   product: string;
+
   outer_fabric: string;
+
   inner_fabric: string;
+
   status: string;
+
   created_at: string;
+
   target_completion_date: string | null;
+
 };
 
+
+
 export default function Home() {
+
   // ORDER STATS
+
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
+
   const [pendingOrders, setPendingOrders] = useState<number | null>(null);
+
   const [thisMonthOrders, setThisMonthOrders] = useState<number | null>(null);
 
+
+
   const [confirmedOrders, setConfirmedOrders] =
+
     useState<number | null>(null);
+
+
 
   const [inProductionOrders, setInProductionOrders] =
+
     useState<number | null>(null);
+
+
 
   const [completedOrders, setCompletedOrders] =
+
     useState<number | null>(null);
+
+
 
   // PRODUCT CHART
+
   const [productCounts, setProductCounts] = useState<ProductCount[]>([]);
+
   const [isLoadingChart, setIsLoadingChart] = useState(true);
 
+
+
   // ACTION NEEDED
+
   const [pendingOrdersList, setPendingOrdersList] = useState<Order[]>([]);
+
   const [inProductionOrdersList, setInProductionOrdersList] = useState<
+
     Order[]
+
   >([]);
 
+
+
   // WAITLIST
+
   const [waitlistTotal, setWaitlistTotal] =
+
     useState<number | null>(null);
 
+
+
   const [watermelonWaitlist, setWatermelonWaitlist] = useState(0);
+
   const [bubbleGumWaitlist, setBubbleGumWaitlist] = useState(0);
+
   const [orangeLimeWaitlist, setOrangeLimeWaitlist] = useState(0);
 
+
+
   useEffect(() => {
+
     async function fetchStats() {
+
       const startOfMonth = new Date();
 
+
+
       startOfMonth.setDate(1);
+
       startOfMonth.setHours(0, 0, 0, 0);
 
+
+
       const [
+
         total,
+
         pending,
+
         thisMonth,
+
         confirmed,
+
         inProduction,
+
         completed,
+
       ] = await Promise.all([
+
         supabase
+
           .from("orders")
+
           .select("*", {
+
             count: "exact",
+
             head: true,
+
           }),
 
+
+
         supabase
+
           .from("orders")
+
           .select("*", {
+
             count: "exact",
+
             head: true,
+
           })
+
           .eq("status", "pending"),
 
+
+
         supabase
+
           .from("orders")
+
           .select("*", {
+
             count: "exact",
+
             head: true,
+
           })
+
           .gte("created_at", startOfMonth.toISOString()),
 
+
+
         supabase
+
           .from("orders")
+
           .select("*", {
+
             count: "exact",
+
             head: true,
+
           })
+
           .eq("status", "confirmed"),
 
+
+
         supabase
+
           .from("orders")
+
           .select("*", {
+
             count: "exact",
+
             head: true,
+
           })
+
           .eq("status", "in_production"),
 
+
+
         supabase
+
           .from("orders")
+
           .select("*", {
+
             count: "exact",
+
             head: true,
+
           })
+
           .eq("status", "completed"),
+
       ]);
 
+
+
       setTotalOrders(total.count ?? 0);
+
       setPendingOrders(pending.count ?? 0);
+
       setThisMonthOrders(thisMonth.count ?? 0);
+
       setConfirmedOrders(confirmed.count ?? 0);
+
       setInProductionOrders(inProduction.count ?? 0);
+
       setCompletedOrders(completed.count ?? 0);
+
     }
 
+
+
     async function fetchProductCounts() {
+
       setIsLoadingChart(true);
 
+
+
       const { data, error } = await supabase
+
         .from("orders")
+
         .select("product");
 
+
+
       if (error) {
+
         console.error(
+
           "Failed to fetch product counts:",
+
           error.message
+
         );
 
+
+
         setIsLoadingChart(false);
+
         return;
+
       }
+
+
 
       const counts: Record<string, number> = {};
 
+
+
       for (const row of data as { product: string }[]) {
+
         counts[row.product] =
+
           (counts[row.product] ?? 0) + 1;
+
       }
+
+
 
       const formatted = Object.entries(counts).map(
+
         ([product, count]) => ({
+
           product,
+
           count,
+
         })
+
       );
+
+
 
       setProductCounts(formatted);
+
       setIsLoadingChart(false);
+
     }
+
+
 
     async function fetchActionNeeded() {
+
       const { data: pending, error: pendingError } =
+
         await supabase
+
           .from("orders")
+
           .select("*")
+
           .eq("status", "pending")
+
           .order("created_at", {
+
             ascending: true,
+
           });
 
+
+
       const {
+
         data: inProduction,
+
         error: inProductionError,
+
       } = await supabase
+
         .from("orders")
+
         .select("*")
+
         .eq("status", "in_production")
+
         .order("created_at", {
+
           ascending: true,
+
         });
 
+
+
       if (pendingError) {
+
         console.error(
+
           "Failed to fetch pending orders:",
+
           pendingError.message
+
         );
+
       }
+
+
 
       if (inProductionError) {
+
         console.error(
+
           "Failed to fetch in-production orders:",
+
           inProductionError.message
+
         );
+
       }
+
+
 
       setPendingOrdersList(
+
         (pending as Order[]) || []
+
       );
+
+
 
       setInProductionOrdersList(
+
         (inProduction as Order[]) || []
+
       );
+
     }
 
+
+
     async function fetchWaitlistStats() {
+
       const { data, error } = await supabase
+
         .from("waitlist")
+
         .select("bag_choice");
 
+
+
       if (error) {
+
         console.error(
+
           "Failed to fetch waitlist stats:",
+
           error.message
+
         );
 
+
+
         setWaitlistTotal(0);
+
         return;
+
       }
+
+
 
       const rows = data ?? [];
 
+
+
       setWaitlistTotal(rows.length);
 
+
+
       setWatermelonWaitlist(
+
         rows.filter(
+
           (entry) =>
+
             entry.bag_choice
+
               ?.trim()
+
               .toLowerCase() === "watermelon"
+
         ).length
+
       );
+
+
 
       setBubbleGumWaitlist(
+
         rows.filter(
+
           (entry) =>
+
             entry.bag_choice
+
               ?.trim()
+
               .toLowerCase() === "bubble gum"
+
         ).length
+
       );
+
+
 
       setOrangeLimeWaitlist(
+
         rows.filter(
+
           (entry) =>
+
             entry.bag_choice
+
               ?.trim()
+
               .toLowerCase() ===
+
             "orange and lime"
+
         ).length
+
       );
+
     }
 
+
+
     fetchStats();
+
     fetchProductCounts();
+
     fetchActionNeeded();
+
     fetchWaitlistStats();
+
   }, []);
 
+
+
   return (
-    <main className="min-h-screen bg-[#FAFAF9]">
-      <section className="mx-auto max-w-7xl px-6 py-10">
+
+    <main className="min-h-screen bg-white text-black">
+
+      <section className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
+
+
 
         {/* DASHBOARD HEADER */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900">
+
+        <div className="mb-8 border-b border-black pb-7">
+
+          <h2 className="text-4xl font-bold tracking-tight text-black">
+
             Dashboard
+
           </h2>
 
-          <p className="mt-2 text-zinc-600">
+
+
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
+
             An overview of your purchase orders, waitlist,
+
             and products sold.
+
           </p>
+
         </div>
+
+
 
         {/* ORDER STATS */}
+
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
 
+
+
           {/* PENDING */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+
+          <div className="border border-black bg-white p-5">
+
             <p className="text-sm text-zinc-500">
+
               Pending
+
             </p>
 
-            <p className="mt-2 font-mono text-3xl font-bold text-yellow-600">
+
+
+            <p className="mt-2 text-4xl font-black tracking-tight text-amber-600">
+
               {pendingOrders ?? "–"}
+
             </p>
+
+
 
             <p className="mt-2 text-xs text-zinc-400">
+
               awaiting confirmation
+
             </p>
+
           </div>
+
+
 
           {/* CONFIRMED */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+
+          <div className="border border-black bg-white p-5">
+
             <p className="text-sm text-zinc-500">
+
               Confirmed
+
             </p>
 
-            <p className="mt-2 font-mono text-3xl font-bold text-blue-600">
+
+
+            <p className="mt-2 text-4xl font-black tracking-tight text-blue-600">
+
               {confirmedOrders ?? "–"}
+
             </p>
+
+
 
             <p className="mt-2 text-xs text-zinc-400">
+
               ready to produce
+
             </p>
+
           </div>
+
+
 
           {/* IN PRODUCTION */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+
+          <div className="border border-black bg-white p-5">
+
             <p className="text-sm text-zinc-500">
+
               In Production
+
             </p>
 
-            <p className="mt-2 font-mono text-3xl font-bold text-purple-600">
+
+
+            <p className="mt-2 text-4xl font-black tracking-tight text-violet-600">
+
               {inProductionOrders ?? "–"}
+
             </p>
+
+
 
             <p className="mt-2 text-xs text-zinc-400">
+
               hands-on work
+
             </p>
+
           </div>
+
+
 
           {/* COMPLETED */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+
+          <div className="border border-black bg-white p-5">
+
             <p className="text-sm text-zinc-500">
+
               Completed
+
             </p>
 
-            <p className="mt-2 font-mono text-3xl font-bold text-green-600">
+
+
+            <p className="mt-2 text-4xl font-black tracking-tight text-emerald-600">
+
               {completedOrders ?? "–"}
+
             </p>
+
+
 
             <p className="mt-2 text-xs text-zinc-400">
+
               shipped
+
             </p>
+
           </div>
+
+
 
           {/* TOTAL */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+
+          <div className="border border-black bg-white p-5">
+
             <p className="text-sm text-zinc-500">
+
               Total Orders
+
             </p>
 
-            <p className="mt-2 font-mono text-3xl font-bold text-zinc-900">
+
+
+            <p className="mt-2 text-4xl font-black tracking-tight text-black">
+
               {totalOrders ?? "–"}
+
             </p>
+
+
 
             <p className="mt-2 text-xs text-zinc-400">
+
               all time
+
             </p>
+
           </div>
 
+
+
         </div>
+
+
 
         {/* WAITLIST SUMMARY */}
-        <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+
+        <div className="mt-8 border border-black bg-white p-5">
+
+
 
           {/* WAITLIST HEADER */}
+
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
 
+
+
             <div>
+
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+
                 Traffic Handbag
+
               </p>
 
-              <h3 className="mt-1 text-lg font-semibold text-zinc-900">
+
+
+              <h3 className="mt-1 text-lg font-semibold text-black">
+
                 Waitlist
+
               </h3>
 
+
+
               <p className="mt-1 text-sm text-zinc-500">
+
                 Customer interest by colorway.
+
               </p>
+
             </div>
+
+
 
             <Link
+
               href="/admin/waitlist"
+
               className="
+
                 inline-flex
+
                 w-fit
+
                 items-center
-                rounded-lg
+
+                
+
                 bg-zinc-900
+
                 px-4
+
                 py-2
+
                 text-sm
+
                 font-medium
+
                 text-white
+
                 transition
+
                 hover:bg-zinc-700
+
               "
+
             >
+
               View Waitlist →
+
             </Link>
 
+
+
           </div>
+
+
 
           {/* WAITLIST STATS */}
+
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
+
+
             {/* TOTAL WAITLIST */}
-            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-4">
+
+            <div className="border border-zinc-300 bg-white p-4">
+
               <p className="text-xs text-zinc-500">
+
                 Total
+
               </p>
 
-              <p className="mt-1 font-mono text-2xl font-bold text-zinc-900">
+
+
+              <p className="mt-1 font-mono text-3xl font-black tracking-tight text-black">
+
                 {waitlistTotal ?? "–"}
+
               </p>
+
             </div>
+
+
 
             {/* WATERMELON */}
-            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-4">
+
+            <div className="border border-zinc-300 bg-white p-4">
+
               <p className="text-xs text-zinc-500">
+
                 Watermelon
+
               </p>
 
-              <p className="mt-1 font-mono text-2xl font-bold text-zinc-900">
+
+
+              <p className="mt-1 font-mono text-3xl font-black tracking-tight text-black">
+
                 {watermelonWaitlist}
+
               </p>
+
             </div>
+
+
 
             {/* BUBBLE GUM */}
-            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-4">
+
+            <div className="border border-zinc-300 bg-white p-4">
+
               <p className="text-xs text-zinc-500">
+
                 Bubble Gum
+
               </p>
 
-              <p className="mt-1 font-mono text-2xl font-bold text-zinc-900">
+
+
+              <p className="mt-1 font-mono text-3xl font-black tracking-tight text-black">
+
                 {bubbleGumWaitlist}
+
               </p>
+
             </div>
+
+
 
             {/* ORANGE + LIME */}
-            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-4">
+
+            <div className="border border-zinc-300 bg-white p-4">
+
               <p className="text-xs text-zinc-500">
+
                 Orange + Lime
+
               </p>
 
-              <p className="mt-1 font-mono text-2xl font-bold text-zinc-900">
+
+
+              <p className="mt-1 font-mono text-3xl font-black tracking-tight text-black">
+
                 {orangeLimeWaitlist}
+
               </p>
+
             </div>
 
+
+
           </div>
+
         </div>
 
+
+
         {/* ACTION NEEDED */}
-        <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
+
+        <div className="mt-8 border border-black bg-white p-6 md:p-8">
+
+
 
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-zinc-900">
+
+            <h3 className="text-lg font-semibold text-black">
+
               Action Needed
+
             </h3>
 
+
+
             <p className="mt-1 text-sm text-zinc-500">
+
               Orders awaiting your attention.
+
             </p>
+
           </div>
 
+
+
           {pendingOrdersList.length === 0 &&
+
           inProductionOrdersList.length === 0 ? (
+
             <p className="text-sm text-zinc-500">
+
               All caught up! No pending or active orders.
+
             </p>
+
           ) : (
+
             <div className="space-y-8">
 
+
+
               {/* PENDING */}
+
               {pendingOrdersList.length > 0 && (
+
                 <div>
-                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-yellow-600">
+
+                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-black">
+
                     Pending (Awaiting Confirmation)
+
                   </h4>
 
+
+
                   <div className="space-y-2">
+
                     {pendingOrdersList.map((order) => {
+
                       const phtNow = new Date(
+
                         Date.now() +
+
                           8 * 60 * 60 * 1000 -
+
                           new Date().getTimezoneOffset() *
+
                             60 *
+
                             1000
+
                       );
+
+
 
                       const daysOld = Math.floor(
+
                         (phtNow.getTime() -
+
                           new Date(
+
                             order.created_at
+
                           ).getTime()) /
+
                           (1000 * 60 * 60 * 24)
+
                       );
+
+
 
                       const daysLeft =
+
                         order.target_completion_date
+
                           ? Math.ceil(
+
                               (new Date(
+
                                 order.target_completion_date
+
                               ).getTime() -
+
                                 phtNow.getTime()) /
+
                                 (1000 *
+
                                   60 *
+
                                   60 *
+
                                   24)
+
                             )
+
                           : null;
 
+
+
                       return (
+
                         <Link
+
                           key={order.id}
+
                           href={`/orders/${order.order_number}`}
+
                           className="
+
                             grid
+
                             grid-cols-1
+
                             gap-2
-                            rounded-lg
+
+                            
+
                             border
+
                             border-zinc-100
+
                             p-3
+
                             transition
+
                             hover:bg-zinc-50
+
                             sm:grid-cols-12
+
                             sm:items-center
+
                             sm:gap-4
+
                           "
+
                         >
-                          <p className="font-mono text-sm font-medium text-zinc-900 sm:col-span-2">
+
+                          <p className="font-mono text-sm font-medium text-black sm:col-span-2">
+
                             {order.order_number}
+
                           </p>
+
+
 
                           <p className="text-sm text-zinc-600 sm:col-span-2">
+
                             {order.customer_name}
+
                           </p>
+
+
 
                           <p className="text-xs text-zinc-500 sm:col-span-3">
+
                             {order.outer_fabric} /{" "}
+
                             {order.inner_fabric}
+
                           </p>
+
+
 
                           <p className="text-xs text-zinc-400 sm:col-span-2 sm:text-right">
+
                             {daysOld === 0
+
                               ? "Today"
+
                               : `${daysOld}d ago`}
+
                           </p>
 
+
+
                           {daysLeft !== null && (
+
                             <p
+
                               className={`text-xs font-medium sm:col-span-3 sm:text-right ${
+
                                 daysLeft < 0
+
                                   ? "text-red-600"
+
                                   : daysLeft <= 2
+
                                   ? "text-orange-600"
-                                  : "text-green-600"
+
+                                  : "text-black"
+
                               }`}
+
                             >
+
                               {daysLeft < 0
+
                                 ? `${Math.abs(
+
                                     daysLeft
+
                                   )}d overdue`
+
                                 : `${daysLeft}d left`}
+
                             </p>
+
                           )}
+
                         </Link>
+
                       );
+
                     })}
+
                   </div>
+
                 </div>
+
               )}
 
+
+
               {/* IN PRODUCTION */}
+
               {inProductionOrdersList.length > 0 && (
+
                 <div>
-                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-purple-600">
+
+                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-black">
+
                     In Production (Active Work)
+
                   </h4>
 
+
+
                   <div className="space-y-2">
+
                     {inProductionOrdersList.map(
+
                       (order) => {
+
                         const getPHTNow = () => {
+
                           const now = new Date();
 
+
+
                           return new Date(
+
                             now.toLocaleString("en-US", {
+
                               timeZone: "Asia/Manila",
+
                             })
+
                           );
+
                         };
+
+
 
                         const phtNow = getPHTNow();
 
+
+
                         const daysActive = Math.floor(
+
                           (phtNow.getTime() -
+
                             new Date(
+
                               order.created_at
+
                             ).getTime()) /
+
                             (1000 * 60 * 60 * 24)
+
                         );
+
+
 
                         const daysLeft =
+
                           order.target_completion_date
+
                             ? Math.ceil(
+
                                 (new Date(
+
                                   order.target_completion_date
+
                                 ).getTime() -
+
                                   phtNow.getTime()) /
+
                                   (1000 *
+
                                     60 *
+
                                     60 *
+
                                     24)
+
                               )
+
                             : null;
 
+
+
                         return (
+
                           <Link
+
                             key={order.id}
+
                             href={`/orders/${order.order_number}`}
+
                             className="
+
                               grid
+
                               grid-cols-1
+
                               gap-2
-                              rounded-lg
+
+                              
+
                               border
+
                               border-zinc-100
+
                               p-3
+
                               transition
+
                               hover:bg-zinc-50
+
                               sm:grid-cols-12
+
                               sm:items-center
+
                               sm:gap-4
+
                             "
+
                           >
-                            <p className="font-mono text-sm font-medium text-zinc-900 sm:col-span-2">
+
+                            <p className="font-mono text-sm font-medium text-black sm:col-span-2">
+
                               {order.order_number}
+
                             </p>
+
+
 
                             <p className="text-sm text-zinc-600 sm:col-span-2">
+
                               {order.customer_name}
+
                             </p>
+
+
 
                             <p className="text-xs text-zinc-500 sm:col-span-3">
+
                               {order.outer_fabric} /{" "}
+
                               {order.inner_fabric}
+
                             </p>
+
+
 
                             <p className="text-xs text-zinc-400 sm:col-span-2 sm:text-right">
+
                               {daysActive === 0
+
                                 ? "Today"
+
                                 : `${daysActive}d ago`}
+
                             </p>
 
+
+
                             {daysLeft !== null && (
+
                               <p
+
                                 className={`text-xs font-medium sm:col-span-3 sm:text-right ${
+
                                   daysLeft < 0
+
                                     ? "text-red-600"
+
                                     : daysLeft <= 2
+
                                     ? "text-orange-600"
-                                    : "text-green-600"
+
+                                    : "text-black"
+
                                 }`}
+
                               >
+
                                 {daysLeft < 0
+
                                   ? `${Math.abs(
+
                                       daysLeft
+
                                     )}d overdue`
+
                                   : `${daysLeft}d left`}
+
                               </p>
+
                             )}
+
                           </Link>
+
                         );
+
                       }
+
                     )}
+
                   </div>
+
                 </div>
+
               )}
 
+
+
             </div>
+
           )}
+
         </div>
 
+
+
              {/* FINANCE SUMMARY */}
+
         <div className="mt-6">
+
           <FinanceSummary />
+
           </div>
+
+
+
+
+
+
 
 
 
 
 
         {/* PRODUCTS SOLD */}
-        <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
+
+        <div className="mt-8 border border-black bg-white p-6 md:p-8">
+
+
 
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-zinc-900">
+
+            <h3 className="text-lg font-semibold text-black">
+
               Products Sold
+
             </h3>
 
+
+
             <p className="mt-1 text-sm text-zinc-500">
+
               Order count by product, across all time.
+
             </p>
+
           </div>
 
+
+
           {isLoadingChart ? (
+
             <p className="text-sm text-zinc-500">
+
               Loading chart...
+
             </p>
+
           ) : productCounts.length === 0 ? (
+
             <p className="text-sm text-zinc-500">
+
               No orders yet — this fills in once orders
+
               start coming in.
+
             </p>
+
           ) : (
+
             <div
+
               style={{
+
                 width: "100%",
+
                 height: 300,
+
               }}
+
             >
+
               <ResponsiveContainer>
+
                 <BarChart data={productCounts}>
+
                   <CartesianGrid
+
                     strokeDasharray="4 4"
+
                     stroke="#e4e4e7"
+
                   />
+
+
 
                   <XAxis
+
                     dataKey="product"
+
                     tick={{
+
                       fill: "#71717a",
+
                       fontSize: 12,
+
                     }}
+
                   />
+
+
 
                   <YAxis
+
                     allowDecimals={false}
+
                     tick={{
+
                       fill: "#71717a",
+
                       fontSize: 12,
+
                     }}
+
                   />
+
+
 
                   <Tooltip
+
                     contentStyle={{
-                      borderRadius: 8,
+
+                      borderRadius: 0,
+
                       border:
+
                         "1px solid #e4e4e7",
+
                       fontSize: 12,
+
                     }}
+
                   />
 
+
+
                   <Bar
+
                     dataKey="count"
+
                     fill="#18181b"
+
                     radius={[4, 4, 0, 0]}
+
                   />
+
                 </BarChart>
+
               </ResponsiveContainer>
+
             </div>
+
           )}
+
+
 
         </div>
 
+
+
       </section>
+
     </main>
+
   );
+
 }

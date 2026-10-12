@@ -535,9 +535,7 @@ export default function MaterialsPage() {
     <div className="min-h-screen bg-white px-4 py-8 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-10">
         <header className="border-b border-black pb-6">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
-            Imbentoree
-          </p>
+          
 
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
             Materials

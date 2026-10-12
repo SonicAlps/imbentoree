@@ -96,7 +96,7 @@ export function Navbar() {
           <div className="flex items-center gap-2 md:gap-3">
             {/* Version - Hidden on mobile */}
             <span className="hidden md:inline font-mono text-xs text-zinc-400">
-              V1.5
+              V2.0
             </span>
 
             {/* New Order Button */}
